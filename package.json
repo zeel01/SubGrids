@@ -1,0 +1,16 @@
+{
+  "name": "subgrids",
+  "version": "1.0.0",
+  "description": "",
+  "main": "subgrids.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^7.8.1",
+    "gulp": "^4.0.2",
+    "gulp-zip": "^5.0.2"
+  }
+}
