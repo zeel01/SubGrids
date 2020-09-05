@@ -6,7 +6,7 @@
 	"version": "0.0.1",
 	"minimumCoreVersion": "0.6.6",
 	"compatibleCoreVersion": "0.6.6",
-	"esmodules": [
+	"scripts": [
 		"subgrids.js"
 	],
 	"styles": [
@@ -17,7 +17,7 @@
 			"lang": "en",
 			"name": "English",
 			"path": "lang/en.json"
-		},
+		}
 	],
 	"manifest": "https://raw.githubusercontent.com/zeel01/    /master/module.json",
 	"url": "https://github.com/zeel01/    ",

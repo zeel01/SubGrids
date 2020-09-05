@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"module": "es2020",
+		"target": "es2020"
+	},
+	"exclude": [
+		"node_modules"
+	],
+	"include": [
+		"*.js",
+		"**/*.js"
+	],
+	"typeAcquisition": {
+		"include": [
+			"jquery",
+		]
+	}
+}
