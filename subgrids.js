@@ -24,6 +24,15 @@ class SubGrid extends SquareGrid {
 		this.width = width;
 		this.height = height;
 		this.size = size;
+		this.pivot.x = width / 2;
+		this.pivot.y = height / 2;
+
+		this.reference = new PIXI.Container();
+		this.reference.x = 0;
+		this.reference.y = 0;
+		this.addChild(this.reference);
+
+		this.objects = [];
 	}
 	/**
 	 * Draws the subgrid.
@@ -47,6 +56,37 @@ class SubGrid extends SquareGrid {
 		background.endFill();
 
 		this.addChild(background);
+	}
+	/**
+	 * Convert the position of the token to a local position.
+	 *
+	 * @param {*} object
+	 * @param {*} reference
+	 * @memberof SubGrid
+	 */
+	getLocalObjectPosition(object) {
+		return this.toLocal(this.reference.position, object)
+	}
+	addObject(object) {
+		this.objects.push(object);
+		
+		return this;
+	}
+	markObjects() {
+		this.objects.forEach(o => this._markObject(o));
+		return this;
+	}
+	_markObject(obj) {
+		const marker = new PIXI.Container();
+		const m = new PIXI.Graphics();
+		m.beginFill(0x660000);
+		m.drawCircle(70, 70, 70);
+		m.endFill();
+		marker.x = 0;
+		marker.y = 0;
+		marker.addChild(m);
+		this.addChild(marker);
+		marker.position = this.getLocalObjectPosition(obj);
 	}
 }
 
