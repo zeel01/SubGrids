@@ -1,4 +1,12 @@
 /**
+ * @example
+ * let theBoat = startBoat(2000, 3000, 1000, 1000, 140)
+ * theBoat.addObject(_token)
+ * theBoat.sailTo(1900, 2400)
+ * theBoat.pullObjects()
+ */
+
+/**
  * Main class for Sub Grids
  * supports only square grids.
  *
