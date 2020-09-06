@@ -77,7 +77,7 @@ class SubGrid extends SquareGrid {
 		return this.toLocal(this.reference.position, object);
 	}
 	getGlobalMarkerPosition(marker) {
-		return this.toLocal(this.position, marker);
+		return marker.getCanvasPos();
 	}
 	addObject(object) {
 		this.objects.push(object);
@@ -89,39 +89,57 @@ class SubGrid extends SquareGrid {
 		return this;
 	}
 	_markObject(obj) {
-		const marker = new PIXI.Container();
-		const m = new PIXI.Graphics();
-		m.beginFill(0x660000);
-		m.drawCircle(70, 70, 70);
-		m.endFill();
-		marker.position = this.getLocalObjectPosition(obj);
-		marker.addChild(m);
-		this.addChild(marker);
-		this.markers.push(marker);
+		const mark = new Marker(this.getLocalObjectPosition(obj));
+		this.addChild(mark);
+		this.markers.push(mark);
 	}
 	async pullObjects() {
-		for (let i in this.objects) await this._pullObject(this.objects[i], i);
+		for (let i =0; i < this.objects.length; i++) await this._pullObject(this.objects[i], i);
 		return this;
 	}
 	async _pullObject(obj, i) {
 		const pos = this.getGlobalMarkerPosition(this.markers[i]);
-		obj.update({ x: pos.x, y: pos.y });
+		obj.update({ x: pos.x, y: pos.y, rotation: this.angle });
 	}
 }
 
+class Marker extends PIXI.Container {
+	constructor(pos) {
+		super();
+
+		this.mark = new PIXI.Graphics();
+		this.mark.beginFill(0x660000);
+		this.mark.drawCircle(70, 70, 70);
+		this.mark.endFill();
+		this.position = pos;
+		this.addChild(this.mark);
+	}
+	getCanvasPos() {
+		const { x, y } = this.toGlobal(new PIXI.Point());
+		const t = canvas.stage.worldTransform;
+		let nx = (x - t.tx) / canvas.stage.scale.x;
+		let ny = (y - t.ty) / canvas.stage.scale.y;
+		return { x: nx, y: ny };
+	}
+}
 class Boat extends SubGrid {
 	sailTo = function (x, y) {
 		this.x = x;
 		this.y = y;
+
+		this.pullObjects();
 	}
 	hardToStarboard = function () {
 		this.angle += 90;
+		this.pullObjects();
 	}
 	hardToPort = function () {
 		this.angle -= 90;
+		this.pullObjects();
 	}
 	turn(degrees) {
-		this.angle += degrees; 
+		this.angle += degrees;
+		this.pullObjects();
 	}
 	scuttle = function () {
 		this.destroy();
