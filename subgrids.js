@@ -33,6 +33,7 @@ class SubGrid extends SquareGrid {
 		this.addChild(this.reference);
 
 		this.objects = [];
+		this.markers = [];
 	}
 	/**
 	 * Draws the subgrid.
@@ -65,11 +66,14 @@ class SubGrid extends SquareGrid {
 	 * @memberof SubGrid
 	 */
 	getLocalObjectPosition(object) {
-		return this.toLocal(this.reference.position, object)
+		return this.toLocal(this.reference.position, object);
+	}
+	getGlobalMarkerPosition(marker) {
+		return this.toLocal(this.position, marker);
 	}
 	addObject(object) {
 		this.objects.push(object);
-		
+		this._markObject(object);
 		return this;
 	}
 	markObjects() {
@@ -82,11 +86,18 @@ class SubGrid extends SquareGrid {
 		m.beginFill(0x660000);
 		m.drawCircle(70, 70, 70);
 		m.endFill();
-		marker.x = 0;
-		marker.y = 0;
+		marker.position = this.getLocalObjectPosition(obj);
 		marker.addChild(m);
 		this.addChild(marker);
-		marker.position = this.getLocalObjectPosition(obj);
+		this.markers.push(marker);
+	}
+	async pullObjects() {
+		for (let i in this.objects) await this._pullObject(this.objects[i], i);
+		return this;
+	}
+	async _pullObject(obj, i) {
+		const pos = this.getGlobalMarkerPosition(this.markers[i]);
+		obj.update({ x: pos.x, y: pos.y });
 	}
 }
 
@@ -118,19 +129,9 @@ function startBoat(x, y, ...args) {
 	const theBoat = new Boat(...args);
 	theBoat.x = x;
 	theBoat.y = y;
-
-	const thePassenger = new PIXI.Container();
-	const p = new PIXI.Graphics();
-	p.beginFill(0x660000);
-	p.drawCircle(70, 70, 70);
-	p.endFill();
-	thePassenger.x = 70;
-	thePassenger.y = 70;
 	
 	theBoat.draw();
-	thePassenger.addChild(p);
-	theBoat.addChild(thePassenger);
 	canvas.tokens.addChild(theBoat);
 
-	return { theBoat, thePassenger }
+	return theBoat;
 }
