@@ -91,7 +91,7 @@ class Marker extends PIXI.Container {
 	}
 	async pull() {
 		const pos = this.getCanvasPos();
-		this.object.update({ x: pos.x, y: pos.y, rotation: this.angle });
+		this.object.update({ x: pos.x, y: pos.y, rotation: this.grid.angle });
 	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
@@ -100,7 +100,7 @@ class Marker extends PIXI.Container {
 		this.mark.endFill();
 		this.mark.pivot.x = 70;
 		this.mark.pivot.y = 70;
-		this.position = this.getLocalPos();
+		this.position.set(...this.getLocalPos());
 		this.addChild(this.mark);
 	}
 	getCanvasPos() {
@@ -108,10 +108,33 @@ class Marker extends PIXI.Container {
 		const t = canvas.stage.worldTransform;
 		let nx = (x - t.tx) / canvas.stage.scale.x;
 		let ny = (y - t.ty) / canvas.stage.scale.y;
-		return { x: nx, y: ny };
+		let [fx, fy] = this._getCenterOffsetPos(nx, ny, true);
+
+		return { x: fx, y: fy };
+	}
+	/**
+	 * Calculates the position of the object center,
+	 * or calculates the position of its corner based on the center.
+	 *
+	 * @param {number} x
+	 * @param {number} y
+	 * @param {boolean} reverse - If true, find the corner, otherwise finds the center
+	 * @return {number[]} [x, y] - The calculated coordinates. 
+	 * @memberof Marker
+	 */
+	_getCenterOffsetPos(x, y, reverse) {
+		const o = this.object;
+		return reverse ? [
+			x - o.width  / 2 ,
+			y - o.height / 2
+		] : [
+			x + o.width / 2,
+			y + o.height / 2
+		];
 	}
 	getLocalPos() {
-		return this.grid.toLocal(this.position, this.object);
+		const { x, y } = this.grid.toLocal(this.position, this.object);
+		return this._getCenterOffsetPos(x, y);
 	}
 }
 class Boat extends SubGrid {
