@@ -146,18 +146,30 @@ class Marker extends PIXI.Container {
 		return { x: fx, y: fy };
 	}
 	/**
-	 * Calculates the position of the object center,
-	 * or calculates the position of its corner based on the center.
+	 * Forwards call to static version, passing this.object
 	 *
 	 * @param {number} x
 	 * @param {number} y
 	 * @param {boolean} reverse - If true, find the corner, otherwise finds the center
-	 * @return {number[]} [x, y] - The calculated coordinates. 
+	 * @return {number[]} [x, y] - The calculated coordinates.
 	 * @memberof Marker
 	 */
 	_getCenterOffsetPos(x, y, reverse) {
-		const o = this.object;
-		//return [x,y]; // Don't change anything
+		return this.constructor.getCenterOffsetPos(this.object, x, y, reverse)
+	}
+	/**
+ 	 * Calculates the position of the object center,
+ 	 * or calculates the position of its corner based on the center.
+	 *
+	 * @static
+	 * @param {Object} o
+	 * @param {number} x
+	 * @param {number} y
+	 * @param {boolean} reverse - If true, find the corner, otherwise finds the center
+	 * @return {number[]} [x, y] - The calculated coordinates.
+	 * @memberof Marker
+	 */
+	static getCenterOffsetPos(o, x, y, reverse) {
 		return reverse ? [
 			x - o.w  / 2 ,
 			y - o.h / 2
@@ -166,6 +178,7 @@ class Marker extends PIXI.Container {
 			y + o.h / 2
 		];
 	}
+	
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.position, this.object);
 		return this._getCenterOffsetPos(x, y);
@@ -213,4 +226,4 @@ function startBoat(x, y, ...args) {
 	window.theBoat = theBoat;
 }
 
-Hooks.on("ready", () => startBoat(2000, 3000, 1000, 1000, 140));
+Hooks.on("ready", () => startBoat(2000, 3000, 980, 980, 140));
