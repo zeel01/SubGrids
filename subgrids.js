@@ -65,18 +65,37 @@ class SubGrid extends SquareGrid {
 
 		this.addChild(background);
 	}
+	addObjects() {
+		canvas.tokens.controlled.forEach(t => this.addObject(t));
+	}
 	addObject(object) {
 		this._addObject(object);
 		return this;
+	}
+	setMaster(object) {
+		this.master = new Marker(object, this);
+		Hooks.on("preUpdateToken", (scene, data, update, options) => {
+			if (data._id != this.master.object.id) return;
+			
+			if (update.x || update.y) {
+				let nx = update.x ?? data.x;
+				let ny = update.y ?? data.y;
+				let { x, y } = this.master._getCenterOffsetPos(nx, ny);
+				this.x = x;
+				this.y = y;
+
+				this.pullObjects();
+			}
+		});
 	}
 	_addObject(obj) {
 		const mark = new Marker(obj, this);
 		this.addChild(mark);
 		this.markers.push(mark);
 	}
-	async pullObjects() {
+	async pullObjects(angle) {
 		for (let i = 0; i < this.markers.length; i++) 
-			await this.markers[i].pull();
+			await this.markers[i].pull(angle);
 		return this;
 	}
 }
@@ -89,9 +108,10 @@ class Marker extends PIXI.Container {
 		this.object = object;
 		this._drawMarker();
 	}
-	async pull() {
-		const pos = this.getCanvasPos();
-		this.object.update({ x: pos.x, y: pos.y, rotation: this.grid.angle });
+	async pull(angle) {
+		const data = this.getCanvasPos();
+		if (angle) data.rotation = this.object.data.rotation + angle;
+		await this.object.update(data);
 	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
@@ -147,15 +167,15 @@ class Boat extends SubGrid {
 	}
 	hardToStarboard = function () {
 		this.angle += 90;
-		this.pullObjects();
+		this.pullObjects(90);
 	}
 	hardToPort = function () {
 		this.angle -= 90;
-		this.pullObjects();
+		this.pullObjects(-90);
 	}
 	turn(degrees) {
 		this.angle += degrees;
-		this.pullObjects();
+		this.pullObjects(degrees);
 	}
 	scuttle = function () {
 		this.destroy();
@@ -179,3 +199,5 @@ function startBoat(x, y, ...args) {
 
 	window.theBoat = theBoat;
 }
+
+Hooks.on("ready", () => startBoat(2000, 3000, 1000, 1000, 140));
