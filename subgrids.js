@@ -96,7 +96,7 @@ class Marker extends PIXI.Container {
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
 		this.mark.beginFill(0x660000);
-		this.mark.drawCircle(70, 70, 70);
+		this.mark.drawCircle(70, 70, 35);
 		this.mark.endFill();
 		this.mark.pivot.x = 70;
 		this.mark.pivot.y = 70;
@@ -124,12 +124,13 @@ class Marker extends PIXI.Container {
 	 */
 	_getCenterOffsetPos(x, y, reverse) {
 		const o = this.object;
+		//return [x,y]; // Don't change anything
 		return reverse ? [
-			x - o.width  / 2 ,
-			y - o.height / 2
+			x - o.w  / 2 ,
+			y - o.h / 2
 		] : [
-			x + o.width / 2,
-			y + o.height / 2
+			x + o.w  / 2 ,
+			y + o.h / 2
 		];
 	}
 	getLocalPos() {
