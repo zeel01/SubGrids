@@ -40,7 +40,6 @@ class SubGrid extends SquareGrid {
 		this.reference.y = 0;
 		this.addChild(this.reference);
 
-		this.objects = [];
 		this.markers = [];
 	}
 	/**
@@ -50,7 +49,7 @@ class SubGrid extends SquareGrid {
 	 * @memberof SubGrid
 	 */
 	draw() {
-		this._drawBackground()
+		this._drawBackground();
 		super.draw();
 	}
 	/**
@@ -66,52 +65,42 @@ class SubGrid extends SquareGrid {
 
 		this.addChild(background);
 	}
-	/**
-	 * Convert the position of the token to a local position.
-	 *
-	 * @param {*} object
-	 * @param {*} reference
-	 * @memberof SubGrid
-	 */
-	getLocalObjectPosition(object) {
-		return this.toLocal(this.reference.position, object);
-	}
-	getGlobalMarkerPosition(marker) {
-		return marker.getCanvasPos();
-	}
 	addObject(object) {
-		this.objects.push(object);
-		this._markObject(object);
+		this._addObject(object);
 		return this;
 	}
-	markObjects() {
-		this.objects.forEach(o => this._markObject(o));
-		return this;
-	}
-	_markObject(obj) {
-		const mark = new Marker(this.getLocalObjectPosition(obj));
+	_addObject(obj) {
+		const mark = new Marker(obj, this);
 		this.addChild(mark);
 		this.markers.push(mark);
 	}
 	async pullObjects() {
-		for (let i =0; i < this.objects.length; i++) await this._pullObject(this.objects[i], i);
+		for (let i = 0; i < this.markers.length; i++) 
+			await this.markers[i].pull();
 		return this;
-	}
-	async _pullObject(obj, i) {
-		const pos = this.getGlobalMarkerPosition(this.markers[i]);
-		obj.update({ x: pos.x, y: pos.y, rotation: this.angle });
 	}
 }
 
 class Marker extends PIXI.Container {
-	constructor(pos) {
+	constructor(object, grid) {
 		super();
 
+		this.grid = grid;
+		this.object = object;
+		this._drawMarker();
+	}
+	async pull() {
+		const pos = this.getCanvasPos();
+		this.object.update({ x: pos.x, y: pos.y, rotation: this.angle });
+	}
+	_drawMarker() {
 		this.mark = new PIXI.Graphics();
 		this.mark.beginFill(0x660000);
 		this.mark.drawCircle(70, 70, 70);
 		this.mark.endFill();
-		this.position = pos;
+		this.mark.pivot.x = 70;
+		this.mark.pivot.y = 70;
+		this.position = this.getLocalPos();
 		this.addChild(this.mark);
 	}
 	getCanvasPos() {
@@ -120,6 +109,9 @@ class Marker extends PIXI.Container {
 		let nx = (x - t.tx) / canvas.stage.scale.x;
 		let ny = (y - t.ty) / canvas.stage.scale.y;
 		return { x: nx, y: ny };
+	}
+	getLocalPos() {
+		return this.grid.toLocal(this.position, this.object);
 	}
 }
 class Boat extends SubGrid {
@@ -151,6 +143,8 @@ class Boat extends SubGrid {
 	}
 }
 
+window.theBoat = {};
+
 function startBoat(x, y, ...args) {
 	const theBoat = new Boat(...args);
 	theBoat.x = x;
@@ -159,5 +153,5 @@ function startBoat(x, y, ...args) {
 	theBoat.draw();
 	canvas.tokens.addChild(theBoat);
 
-	return theBoat;
+	window.theBoat = theBoat;
 }
