@@ -49,8 +49,8 @@ class SubGrid extends SquareGrid {
 	 * @memberof SubGrid
 	 */
 	draw() {
-		this._drawBackground();
 		super.draw();
+		this._drawBackground();
 	}
 	/**
 	 * Draw a rectangular background
@@ -59,11 +59,15 @@ class SubGrid extends SquareGrid {
 	 */
 	_drawBackground() {
 		const background = new PIXI.Graphics();
-		background.beginFill(0x003333);
+		background.beginFill(0x003333, .3);
 		background.drawRect(0, 0, this.width, this.height);
 		background.endFill();
 
+		this.background = background;
 		this.addChild(background);
+	}
+	inBounds(x, y) {
+		return this.background.containsPoint(new PIXI.Point(x, y));
 	}
 	addObjects() {
 		canvas.tokens.controlled.forEach(t => this.addObject(t));
@@ -74,13 +78,22 @@ class SubGrid extends SquareGrid {
 	}
 	setMaster(object) {
 		this.master = new Marker(object, this);
+		this.addChild(this.master);
 		Hooks.on("preUpdateToken", (scene, data, update, options) => {
 			if (data._id != this.master.object.id) return;
-			
+
+			if (update.rotation) {
+				const ca = this.angle;
+				const da = update.rotation - this.angle;
+
+				this.angle += da;
+				this.pullObjects(da);
+			}
+
 			if (update.x || update.y) {
 				let nx = update.x ?? data.x;
 				let ny = update.y ?? data.y;
-				let { x, y } = this.master._getCenterOffsetPos(nx, ny);
+				let [ x, y ] = this.master._getCenterOffsetPos(nx, ny);
 				this.x = x;
 				this.y = y;
 
