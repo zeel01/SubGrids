@@ -68,15 +68,27 @@ class SubGrid extends SquareGrid {
 		this.addChild(background);
 	}
 	addObjects() {
-		canvas.tiles.controlled.forEach(t => this.addObject(t));
-		canvas.tokens.controlled.forEach(t => this.addObject(t));
+		canvas.tiles.controlled.forEach(t => this.addTile(t));
+		canvas.tokens.controlled.forEach(t => this.addToken(t));
 	}
-	addObject(object) {
-		this._addObject(object);
-		return this;
+	/**
+	 * Add a Marker
+	 *
+	 * @param {Marker} mark
+	 * @memberof SubGrid
+	 */
+	add(mark) {
+		this.addChild(mark);
+		this.markers.push(mark);
+	}
+	addToken(tkn) {
+		this.add(new TokenMarker(tkn, this));
+	}
+	addTile(tile) {
+		this.add(new TileMarker(tile, this));
 	}
 	setMaster(object) {
-		this.master = new Marker(object, this);
+		this.master = new TokenMarker(object, this);
 		this.addChild(this.master);
 		Hooks.on("preUpdateToken", (scene, data, update, options) => {
 			if (data._id != this.master.object.id) return;
@@ -99,11 +111,6 @@ class SubGrid extends SquareGrid {
 				this.pullObjects();
 			}
 		});
-	}
-	_addObject(obj) {
-		const mark = new Marker(obj, this);
-		this.addChild(mark);
-		this.markers.push(mark);
 	}
 	async pullObjects(angle) {
 		for (let i = 0; i < this.markers.length; i++) 
@@ -170,17 +177,35 @@ class Marker extends PIXI.Container {
 	 * @memberof Marker
 	 */
 	static getCenterOffsetPos(o, x, y, reverse) {
-		return reverse ? {
-			x: x - o.w / 2 ,
-			y: y - o.h / 2
-		 } : {
-			x: x + o.w / 2 ,
-			y: y + o.h / 2
-		 };
+		return { x, y };
 	}
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.position, this.object);
 		return this._getCenterOffsetPos(x, y);
+	}
+}
+class TokenMarker extends Marker {
+	/** @override */
+	static getCenterOffsetPos(o, x, y, reverse) {
+		return reverse ? {
+			x: x - o.w / 2,
+			y: y - o.h / 2
+		} : {
+			x: x + o.w / 2,
+			y: y + o.h / 2
+		};
+	}
+}
+class TileMarker extends Marker {
+	/** @override */
+	static getCenterOffsetPos(o, x, y, reverse) {
+		return reverse ? {
+			x: x - o.width  / 2,
+			y: y - o.height / 2
+		} : {
+			x: x + o.width  / 2,
+			y: y + o.height / 2
+		};
 	}
 }
 class Boat extends SubGrid {
