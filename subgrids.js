@@ -93,12 +93,9 @@ class SubGrid extends SquareGrid {
 		Hooks.on("preUpdateToken", (scene, data, update, options) => {
 			if (data._id != this.master.object.id) return;
 
-			if (update.rotation) {
-				const ca = this.angle;
-				const da = update.rotation - this.angle;
-
-				this.angle += da;
-				this.pullObjects(da);
+			if (update.rotation != undefined) {
+				this.angle = update.rotation;
+				this.pullObjects(update.rotation);
 			}
 
 			if (update.x || update.y) {
@@ -129,7 +126,7 @@ class Marker extends PIXI.Container {
 	}
 	async pull(angle) {
 		const data = this.getCanvasPos();
-		if (angle) data.rotation = this.object.data.rotation + angle;
+		if (angle) data.rotation = this.relativeAngle + angle;
 		await this.object.update(data);
 	}
 	_drawMarker() {
@@ -178,6 +175,12 @@ class Marker extends PIXI.Container {
 	 */
 	static getCenterOffsetPos(o, x, y, reverse) {
 		return { x, y };
+	}
+	get relativeAngle() {
+		if (!this._relativeAngle) {
+			this._relativeAngle = this.object.data.rotation - this.angle;
+		}
+		return this._relativeAngle;
 	}
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.position, this.object);
