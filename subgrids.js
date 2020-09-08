@@ -121,6 +121,13 @@ class SubGrid extends SquareGrid {
 			await this.markers[i].pull(angle);
 		return this;
 	}
+	inBounds(token) {
+		let { x, y } = new TokenMarker(token, this).getLocalPos();
+		console.debug(x, y);
+		const bounds = this.getBounds();
+		console.debug(bounds);
+		return bounds.contains(x, y);
+	}
 }
 
 class Marker extends PIXI.Container {
