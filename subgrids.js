@@ -26,7 +26,7 @@ class SubGrid extends SquareGrid {
 			dimensions: {
 				width, height, size
 			},
-			color: canvas.scene.data.gridColor.replace("#", "0x"),
+			color: 0xFF0066, //canvas.scene.data.gridColor.replace("#", "0x"),
 			alpha: canvas.scene.data.gridAlpha
 		})
 		this.width = width;
@@ -62,12 +62,10 @@ class SubGrid extends SquareGrid {
 		background.beginFill(0x003333, .3);
 		background.drawRect(0, 0, this.width, this.height);
 		background.endFill();
-
+		background.width = this.width;
+		background.height = this.height;
 		this.background = background;
 		this.addChild(background);
-	}
-	inBounds(x, y) {
-		return this.background.containsPoint(new PIXI.Point(x, y));
 	}
 	addObjects() {
 		canvas.tokens.controlled.forEach(t => this.addObject(t));
@@ -133,7 +131,8 @@ class Marker extends PIXI.Container {
 		this.mark.endFill();
 		this.mark.pivot.x = 70;
 		this.mark.pivot.y = 70;
-		this.position.set(...this.getLocalPos());
+		const { x, y } = this.getLocalPos()
+		this.position.set(x, y);
 		this.addChild(this.mark);
 	}
 	getCanvasPos() {
@@ -141,7 +140,7 @@ class Marker extends PIXI.Container {
 		const t = canvas.stage.worldTransform;
 		let nx = (x - t.tx) / canvas.stage.scale.x;
 		let ny = (y - t.ty) / canvas.stage.scale.y;
-		let [fx, fy] = this._getCenterOffsetPos(nx, ny, true);
+		let { fx, fy } = this._getCenterOffsetPos(nx, ny, true);
 
 		return { x: fx, y: fy };
 	}
@@ -151,7 +150,7 @@ class Marker extends PIXI.Container {
 	 * @param {number} x
 	 * @param {number} y
 	 * @param {boolean} reverse - If true, find the corner, otherwise finds the center
-	 * @return {number[]} [x, y] - The calculated coordinates.
+	 * @return {number[]} {x, y} - The calculated coordinates.
 	 * @memberof Marker
 	 */
 	_getCenterOffsetPos(x, y, reverse) {
@@ -166,19 +165,18 @@ class Marker extends PIXI.Container {
 	 * @param {number} x
 	 * @param {number} y
 	 * @param {boolean} reverse - If true, find the corner, otherwise finds the center
-	 * @return {number[]} [x, y] - The calculated coordinates.
+	 * @return {number[]} {x, y} - The calculated coordinates.
 	 * @memberof Marker
 	 */
 	static getCenterOffsetPos(o, x, y, reverse) {
-		return reverse ? [
-			x - o.w  / 2 ,
-			y - o.h / 2
-		] : [
-			x + o.w  / 2 ,
-			y + o.h / 2
-		];
+		return reverse ? {
+			x: x - o.w  / 2 ,
+			y: y - o.h / 2
+		 } : {
+			x: x + o.w  / 2 ,
+			y: y + o.h / 2
+		 };
 	}
-	
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.position, this.object);
 		return this._getCenterOffsetPos(x, y);
