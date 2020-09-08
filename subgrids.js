@@ -21,7 +21,11 @@ class SubGrid extends SquareGrid {
 	 * @param {number} size - Width/Height of a grid square
 	 * @memberof SubGrid
 	 */
-	constructor(width, height, size) {
+	constructor(width, height, master) {
+		const size = canvas.scene.data.grid;
+		width = width * size;
+		height = height * size;
+
 		super({
 			dimensions: {
 				width, height, size
@@ -29,18 +33,18 @@ class SubGrid extends SquareGrid {
 			color: 0xFF0066, //canvas.scene.data.gridColor.replace("#", "0x"),
 			alpha: canvas.scene.data.gridAlpha
 		})
-		this.width = width;
-		this.height = height;
-		this.size = size;
+
+		this.dims = {
+			width, height, size
+		}
+		
 		this.pivot.x = width / 2;
 		this.pivot.y = height / 2;
 
-		this.reference = new PIXI.Container();
-		this.reference.x = 0;
-		this.reference.y = 0;
-		this.addChild(this.reference);
+		if (master) this.setMaster(master);
 
 		this.markers = [];
+		this.draw();
 	}
 	/**
 	 * Draws the subgrid.
@@ -60,10 +64,10 @@ class SubGrid extends SquareGrid {
 	_drawBackground() {
 		const background = new PIXI.Graphics();
 		background.beginFill(0x003333, .3);
-		background.drawRect(0, 0, this.width, this.height);
+		background.drawRect(0, 0, this.dims.width, this.dims.height);
 		background.endFill();
-		background.width = this.width;
-		background.height = this.height;
+	//	background.width = this.options.dimensions.width;
+	//	background.height = this.options.dimensions.height;
 		this.background = background;
 		this.addChild(background);
 	}
@@ -288,8 +292,6 @@ function startBoat(x, y, ...args) {
 	window.theBoat = theBoat;
 }
 
-//Hooks.on("ready", () => startBoat(2000, 3000, 980, 980, 140));
-
 Hooks.on("renderTokenHUD", (hud, html) => {
 	let button = document.createElement("div");
 
@@ -327,8 +329,7 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 							const width  = parseInt(html.find("[name=width]").val());
 							const height = parseInt(html.find("[name=height]").val());
 
-							const grid = new SubGrid(width * 140, height * 140, 140);
-							grid.draw();
+							const grid = new SubGrid(width, height, hud.object);
 							canvas.grid.addChild(grid);
 							window.SUBGRIDS.push(grid);
 
