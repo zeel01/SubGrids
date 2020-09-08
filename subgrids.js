@@ -89,11 +89,10 @@ class SubGrid extends SquareGrid {
 		this.add(new TileMarker(tile, this));
 	}
 	setMaster(object) {
-		this.master = new TokenMarker(object, this);
+		this.master = new TokenMarker(object, this, true);
 		this.addChild(this.master);
 
-		let pos = this.master.getCanvasPos();
-		let { x, y } = this.master._getCenterOffsetPos(pos.x, pos.y);
+		let { x, y } = this.master._getCenterOffsetPos(object.x, object.y);
 		this.x = x;
 		this.y = y;
 
@@ -121,21 +120,37 @@ class SubGrid extends SquareGrid {
 			await this.markers[i].pull(angle);
 		return this;
 	}
+	globalBounds() {
+		const b = this.getBounds();
+		const t = canvas.stage.worldTransform;
+		let nx = (b.x - t.tx) / canvas.stage.scale.x;
+		let ny = (b.y - t.ty) / canvas.stage.scale.y;
+		let w = b.width / canvas.stage.scale.x;
+		let h = b.height / canvas.stage.scale.y;
+
+		return new PIXI.Rectangle(nx, ny, w, h);
+	}
 	inBounds(token) {
-		let { x, y } = new TokenMarker(token, this).getLocalPos();
+		const bounds = this.globalBounds();
+		const mark = new TokenMarker(token, this);
+		let { x, y } = this.addChild(mark).getCanvasPos();
+		this.removeChild(mark);
 		console.debug(x, y);
-		const bounds = this.getBounds();
+		
 		console.debug(bounds);
 		return bounds.contains(x, y);
 	}
 }
 
 class Marker extends PIXI.Container {
-	constructor(object, grid) {
+	constructor(object, grid, master=false) {
 		super();
+
+		this.master = master;
 
 		this.grid = grid;
 		this.object = object;
+
 		this._drawMarker();
 
 		this.relativeAngle = this.object.data.rotation - this.angle;
@@ -152,7 +167,7 @@ class Marker extends PIXI.Container {
 		this.mark.endFill();
 		this.mark.pivot.x = 70;
 		this.mark.pivot.y = 70;
-		const { x, y } = this.getLocalPos()
+		const { x, y } = this.master ? { x: this.grid.pivot.x, y: this.grid.pivot.y } : this.getLocalPos();
 		this.position.set(x, y);
 		this.addChild(this.mark);
 	}
