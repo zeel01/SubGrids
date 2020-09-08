@@ -133,7 +133,9 @@ class SubGrid extends SquareGrid {
 	inBounds(token) {
 		const bounds = this.globalBounds();
 		const mark = new TokenMarker(token, this);
-		let { x, y } = this.addChild(mark).getCanvasPos();
+		const cp = this.addChild(mark).getCanvasPos();
+		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
+		 
 		this.removeChild(mark);
 		console.debug(x, y);
 		
