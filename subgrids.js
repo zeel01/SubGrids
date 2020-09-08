@@ -88,6 +88,11 @@ class SubGrid extends SquareGrid {
 	addTile(tile) {
 		this.add(new TileMarker(tile, this));
 	}
+	autoAddObjects() {
+		canvas.tiles.objects.children.forEach(t => this.inBounds(t) ? this.addTile(t) : null);
+		canvas.tokens.objects.children.forEach(t => this.inBounds(t) ? this.addToken(t) : null);
+	}
+
 	setMaster(object) {
 		this.master = new TokenMarker(object, this, true);
 		this.addChild(this.master);
@@ -130,9 +135,9 @@ class SubGrid extends SquareGrid {
 
 		return new PIXI.Rectangle(nx, ny, w, h);
 	}
-	inBounds(token) {
+	inBounds(object) {
 		const bounds = this.globalBounds();
-		const mark = new TokenMarker(token, this);
+		const mark = object instanceof Token ? new TokenMarker(object, this) : new TileMarker(object, this);
 		const cp = this.addChild(mark).getCanvasPos();
 		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
 		 
@@ -299,7 +304,7 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 		button.title = game.i18n.localize("Add to Subgrid");
 
 		$(button).click((event) => {
-			hasGrid.addObjects();
+			hasGrid.autoAddObjects();
 		});
 	}
 	else {
