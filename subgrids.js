@@ -124,10 +124,9 @@ class Marker extends PIXI.Container {
 		this.object = object;
 		this._drawMarker();
 	}
+	/** @override */
 	async pull(angle) {
-		const data = this.getCanvasPos();
-		if (angle) data.rotation = this.relativeAngle + angle;
-		await this.object.update(data);
+		return;
 	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
@@ -198,17 +197,28 @@ class TokenMarker extends Marker {
 			y: y + o.h / 2
 		};
 	}
+	async pull(angle) {
+		const data = this.getCanvasPos();
+		if (angle) data.rotation = this.relativeAngle + angle;
+		await this.object.update(data);
+	}
 }
 class TileMarker extends Marker {
 	/** @override */
 	static getCenterOffsetPos(o, x, y, reverse) {
+		const i = o.tile.img;
 		return reverse ? {
-			x: x - o.width  / 2,
-			y: y - o.height / 2
+			x: x - i.width  / 2,
+			y: y - i.height / 2
 		} : {
-			x: x + o.width  / 2,
-			y: y + o.height / 2
+			x: x + i.width  / 2,
+			y: y + i.height / 2
 		};
+	}
+	async pull(angle) {
+		const data = this.getCanvasPos();
+		if (angle) data.rotation = this.relativeAngle + angle;
+		await this.object.update(data);
 	}
 }
 class Boat extends SubGrid {
