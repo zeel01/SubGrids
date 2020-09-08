@@ -82,6 +82,7 @@ class SubGrid extends SquareGrid {
 		this.markers.push(mark);
 	}
 	addToken(tkn) {
+		if (tkn.id == this.master.object.id) return;
 		this.add(new TokenMarker(tkn, this));
 	}
 	addTile(tile) {
@@ -90,6 +91,12 @@ class SubGrid extends SquareGrid {
 	setMaster(object) {
 		this.master = new TokenMarker(object, this);
 		this.addChild(this.master);
+
+		let pos = this.master.getCanvasPos();
+		let { x, y } = this.master._getCenterOffsetPos(pos.x, pos.y);
+		this.x = x;
+		this.y = y;
+
 		Hooks.on("preUpdateToken", (scene, data, update, options) => {
 			if (data._id != this.master.object.id) return;
 
@@ -123,10 +130,13 @@ class Marker extends PIXI.Container {
 		this.grid = grid;
 		this.object = object;
 		this._drawMarker();
+
+		this.relativeAngle = this.object.data.rotation - this.angle;
 	}
-	/** @override */
 	async pull(angle) {
-		return;
+		const data = this.getCanvasPos();
+		if (angle != undefined) data.rotation = this.relativeAngle + angle;
+		await this.object.update(data);
 	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
@@ -175,15 +185,15 @@ class Marker extends PIXI.Container {
 	static getCenterOffsetPos(o, x, y, reverse) {
 		return { x, y };
 	}
-	get relativeAngle() {
-		if (!this._relativeAngle) {
-			this._relativeAngle = this.object.data.rotation - this.angle;
-		}
-		return this._relativeAngle;
-	}
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.position, this.object);
 		return this._getCenterOffsetPos(x, y);
+	}
+
+	doHighlight(x, y) {
+		if (!this.highlightLayer) this.highlightLayer = this.addChild(new GridHighlight("sub_highlight"));
+
+		this.highlightGridPosition(this.highlightLayer, { x, y, color: 0xFF0000, border: 0x0000FF })
 	}
 }
 class TokenMarker extends Marker {
@@ -197,11 +207,6 @@ class TokenMarker extends Marker {
 			y: y + o.h / 2
 		};
 	}
-	async pull(angle) {
-		const data = this.getCanvasPos();
-		if (angle) data.rotation = this.relativeAngle + angle;
-		await this.object.update(data);
-	}
 }
 class TileMarker extends Marker {
 	/** @override */
@@ -214,11 +219,6 @@ class TileMarker extends Marker {
 			x: x + i.width  / 2,
 			y: y + i.height / 2
 		};
-	}
-	async pull(angle) {
-		const data = this.getCanvasPos();
-		if (angle) data.rotation = this.relativeAngle + angle;
-		await this.object.update(data);
 	}
 }
 class Boat extends SubGrid {
@@ -243,14 +243,10 @@ class Boat extends SubGrid {
 	scuttle = function () {
 		this.destroy();
 	}
-	doHighlight(x, y) {
-		if (!this.highlightLayer) this.highlightLayer = this.addChild(new GridHighlight("sub_highlight"));
-
-		this.highlightGridPosition(this.highlightLayer, { x, y, color: 0xFF0000, border: 0x0000FF })
-	}
+	
 }
 
-window.theBoat = {};
+window.SUBGRIDS = [];
 
 function startBoat(x, y, ...args) {
 	const theBoat = new Boat(...args);
@@ -263,4 +259,65 @@ function startBoat(x, y, ...args) {
 	window.theBoat = theBoat;
 }
 
-Hooks.on("ready", () => startBoat(2000, 3000, 980, 980, 140));
+//Hooks.on("ready", () => startBoat(2000, 3000, 980, 980, 140));
+
+Hooks.on("renderTokenHUD", (hud, html) => {
+	let button = document.createElement("div");
+
+	button.classList.add("control-icon");
+	button.classList.add("subgrid-ctr");
+	button.innerHTML = `<i class="fas fa-th"></i>`
+
+	const hasGrid = window.SUBGRIDS.find(grid => grid.master.object.id == hud.object.id);
+
+	if (hasGrid) {
+		button.innerHTML = `<i class="fas fa-plus"></i>`
+		button.title = game.i18n.localize("Add to Subgrid");
+
+		$(button).click((event) => {
+			hasGrid.addObjects();
+		});
+	}
+	else {
+		button.title = game.i18n.localize("Create Subgrid");
+
+		$(button).click((event) => {
+			new Dialog({
+				title: game.i18n.localize("Create Subgrid"),
+				content: `
+					<label>${"Width (squares)"}</label>
+					<input type="number" name="width" placeholder="width"><br>
+					<label>${"Height (squares)"}</label>
+					<input type="number" name="height" placeholder="height">
+				`,
+				buttons: {
+					submit: {
+						icon: `<i class="fas fa-check"></i>`,
+						label: "Create",
+						callback: (html) => {
+							const width  = parseInt(html.find("[name=width]").val());
+							const height = parseInt(html.find("[name=height]").val());
+
+							const grid = new SubGrid(width * 140, height * 140, 140);
+							grid.draw();
+							canvas.grid.addChild(grid);
+							window.SUBGRIDS.push(grid);
+
+							grid.setMaster(hud.object);
+						}
+					},
+					cancel: {
+						icon: '<i class="fas fa-times"></i>',
+						label: "Cancel",
+						callback: () => {
+							
+						}
+					}
+				},
+				default: "submit"
+			}).render(true);
+			
+		});
+	}
+	html.find("div.left").append(button);
+});
