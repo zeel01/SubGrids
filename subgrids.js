@@ -68,6 +68,7 @@ class SubGrid extends SquareGrid {
 		this.addChild(background);
 	}
 	addObjects() {
+		canvas.tiles.controlled.forEach(t => this.addObject(t));
 		canvas.tokens.controlled.forEach(t => this.addObject(t));
 	}
 	addObject(object) {
@@ -91,7 +92,7 @@ class SubGrid extends SquareGrid {
 			if (update.x || update.y) {
 				let nx = update.x ?? data.x;
 				let ny = update.y ?? data.y;
-				let [ x, y ] = this.master._getCenterOffsetPos(nx, ny);
+				let { x, y } = this.master._getCenterOffsetPos(nx, ny);
 				this.x = x;
 				this.y = y;
 
@@ -140,9 +141,9 @@ class Marker extends PIXI.Container {
 		const t = canvas.stage.worldTransform;
 		let nx = (x - t.tx) / canvas.stage.scale.x;
 		let ny = (y - t.ty) / canvas.stage.scale.y;
-		let { fx, fy } = this._getCenterOffsetPos(nx, ny, true);
+		
 
-		return { x: fx, y: fy };
+		return this._getCenterOffsetPos(nx, ny, true);;
 	}
 	/**
 	 * Forwards call to static version, passing this.object
@@ -150,7 +151,7 @@ class Marker extends PIXI.Container {
 	 * @param {number} x
 	 * @param {number} y
 	 * @param {boolean} reverse - If true, find the corner, otherwise finds the center
-	 * @return {number[]} {x, y} - The calculated coordinates.
+	 * @return {number[] {x, y} - The calculated coordinates.
 	 * @memberof Marker
 	 */
 	_getCenterOffsetPos(x, y, reverse) {
@@ -170,10 +171,10 @@ class Marker extends PIXI.Container {
 	 */
 	static getCenterOffsetPos(o, x, y, reverse) {
 		return reverse ? {
-			x: x - o.w  / 2 ,
+			x: x - o.w / 2 ,
 			y: y - o.h / 2
 		 } : {
-			x: x + o.w  / 2 ,
+			x: x + o.w / 2 ,
 			y: y + o.h / 2
 		 };
 	}
@@ -219,7 +220,7 @@ function startBoat(x, y, ...args) {
 	theBoat.y = y;
 	
 	theBoat.draw();
-	canvas.tokens.addChild(theBoat);
+	canvas.grid.addChild(theBoat);
 
 	window.theBoat = theBoat;
 }
