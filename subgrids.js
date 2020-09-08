@@ -92,7 +92,7 @@ class SubGrid extends SquareGrid {
 		this.master = new TokenMarker(object, this, true);
 		this.addChild(this.master);
 
-		let { x, y } = this.master._getCenterOffsetPos(object.x, object.y);
+		let { x, y } = this.master.getCanvasObjectCenter();
 		this.x = x;
 		this.y = y;
 
@@ -133,7 +133,8 @@ class SubGrid extends SquareGrid {
 	inBounds(token) {
 		const bounds = this.globalBounds();
 		const mark = new TokenMarker(token, this);
-		let { x, y } = this.addChild(mark).getCanvasPos();
+		this.addChild(mark);
+		let { x, y } = mark.getCenterCanvasPos();
 		this.removeChild(mark);
 		console.debug(x, y);
 		
@@ -141,7 +142,6 @@ class SubGrid extends SquareGrid {
 		return bounds.contains(x, y);
 	}
 }
-
 class Marker extends PIXI.Container {
 	constructor(object, grid, master=false) {
 		super();
@@ -160,6 +160,63 @@ class Marker extends PIXI.Container {
 		if (angle != undefined) data.rotation = this.relativeAngle + angle;
 		await this.object.update(data);
 	}
+	get pos() {
+		return {
+			get mark() {
+				return {
+					get corner() {
+						return {
+							get local() {
+								const { x, y } = this.pos.mark.center.local;
+								return this._getCenterOffsetPos(nx, ny, true);
+							},
+							get canvas() {
+								return getMarkCanvasPos();
+							}
+						}
+					},
+					get center() {
+						return {
+							get local() {
+								return {
+									x: this.position.x,
+									y: this.position.y
+								}
+							},
+							get canvas() {
+								const { x, y } = this.pos.mark.corner.canvas;
+								return this._getCenterOffsetPos(x, y, true);
+							}
+						}
+					}
+				}
+			},
+			get obj() {
+				return {
+					get corner() {
+						return {
+							get local() {
+
+							},
+							get canvas() {
+
+							}
+						} 
+					},
+					get center() {
+						return {
+							get local() {
+
+							},
+							get canvas() {
+
+							}
+						} 
+					}
+				}
+			}
+		}
+	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
 		this.mark.beginFill(0x660000);
@@ -171,14 +228,17 @@ class Marker extends PIXI.Container {
 		this.position.set(x, y);
 		this.addChild(this.mark);
 	}
-	getCanvasPos() {
+	getMarkCanvasPos() {
 		const { x, y } = this.toGlobal(new PIXI.Point());
 		const t = canvas.stage.worldTransform;
 		let nx = (x - t.tx) / canvas.stage.scale.x;
 		let ny = (y - t.ty) / canvas.stage.scale.y;
-		
 
-		return this._getCenterOffsetPos(nx, ny, true);;
+		return { x: ny, y:ny };
+	}
+	getCanvasPos() {
+		const { x, y } = this.getCenterCanvasPos();
+		return this._getCenterOffsetPos(nx, ny, true);
 	}
 	/**
 	 * Forwards call to static version, passing this.object
@@ -210,6 +270,13 @@ class Marker extends PIXI.Container {
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.position, this.object);
 		return this._getCenterOffsetPos(x, y);
+	}
+	getLocalObjectCenter() {
+		return this.getLocalPos();
+	}
+	getCanvasObjectCenter() {
+		const o = this.object;
+		return this._getCenterOffsetPos(o.x, o.y)
 	}
 
 	doHighlight(x, y) {
