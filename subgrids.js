@@ -89,17 +89,21 @@ class SubGrid extends SquareGrid {
 		this.markers.push(mark);
 	}
 	addToken(tkn) {
+		if (this.alreadyHas(tkn)) return;
 		if (tkn.id == this.master.object.id) return;
 		this.add(new TokenMarker(tkn, this));
 	}
 	addTile(tile) {
+		if (this.alreadyHas(tile)) return;
 		this.add(new TileMarker(tile, this));
 	}
 	autoAddObjects() {
 		canvas.tiles.objects.children.forEach(t => this.inBounds(t) ? this.addTile(t) : null);
 		canvas.tokens.objects.children.forEach(t => this.inBounds(t) ? this.addToken(t) : null);
 	}
-
+	alreadyHas(obj) {
+		return this.markers.some(m => m.object.id == obj.id);
+	}
 	setMaster(object) {
 		this.master = new TokenMarker(object, this, true);
 		this.addChild(this.master);
@@ -149,9 +153,6 @@ class SubGrid extends SquareGrid {
 		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
 		 
 		this.removeChild(mark);
-		console.debug(x, y);
-		
-		console.debug(bounds);
 		return bounds.contains(x, y);
 	}
 }
