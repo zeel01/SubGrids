@@ -45,6 +45,9 @@ class SubGrid extends SquareGrid {
 
 		this.markers = [];
 		this.draw();
+
+		this.transform.scale.x = 1;
+		this.transform.scale.y = 1;
 	}
 	/**
 	 * Draws the subgrid.
