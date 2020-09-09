@@ -46,6 +46,8 @@ class SubGrid extends SquareGrid {
 		this.markers = [];
 		this.draw();
 
+		this.reference = this.addChild(new PIXI.Container());
+
 		this.transform.scale.x = 1;
 		this.transform.scale.y = 1;
 	}
@@ -105,7 +107,7 @@ class SubGrid extends SquareGrid {
 		return this.markers.some(m => m.object.id == obj.id);
 	}
 	setMaster(object) {
-		this.master = new TokenMarker(object, this, true);
+		this.master = new TokenMarker(object, this, { master: true });
 		this.addChild(this.master);
 
 		let { x, y } = this.master._getCenterOffsetPos(object.x, object.y);
@@ -126,6 +128,8 @@ class SubGrid extends SquareGrid {
 				let { x, y } = this.master._getCenterOffsetPos(nx, ny);
 				this.x = x;
 				this.y = y;
+
+				options.animate = false;
 
 				this.pullObjects();
 			}
@@ -148,32 +152,49 @@ class SubGrid extends SquareGrid {
 	}
 	inBounds(object) {
 		const bounds = this.globalBounds();
-		const mark = object instanceof Token ? new TokenMarker(object, this) : new TileMarker(object, this);
+		const mark = object instanceof Token ? new TokenMarker(object, this, { highlight: false }) : new TileMarker(object, this);
 		const cp = this.addChild(mark).getCanvasPos();
 		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
 		 
 		this.removeChild(mark);
 		return bounds.contains(x, y);
 	}
+	doHighlight(x, y) {
+		if (!this.highlightLayer) this.highlightLayer = this.addChild(new GridHighlight("sub_highlight"));
+
+		this.highlightGridPosition(this.highlightLayer, { x, y, color: 0xFF0000, border: 0x0000FF })
+	}
 }
 
 class Marker extends PIXI.Container {
-	constructor(object, grid, master=false) {
+	constructor(object, grid, options={ master: false, mark: false, highlight: true }) {
 		super();
 
-		this.master = master;
+		this.options = options;
 
 		this.grid = grid;
 		this.object = object;
 
-		this._drawMarker();
+		if (options.mark) this._drawMarker();
+		this.setPosition();
 
 		this.relativeAngle = this.object.data.rotation - this.angle;
+
+		if (options.highlight) this._highlight();
+
+		this._createUpdateHook();
 	}
+
+	get type() { return null; }
+
 	async pull(angle) {
 		const data = this.getCanvasPos();
 		if (angle != undefined) data.rotation = this.relativeAngle + angle;
-		await this.object.update(data);
+		await this.object.update(data, { animate: false, subgrid: true });
+	}
+	_highlight() {
+		this.object._hover = true;
+		this.object.refresh();
 	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
@@ -182,9 +203,30 @@ class Marker extends PIXI.Container {
 		this.mark.endFill();
 		this.mark.pivot.x = 70;
 		this.mark.pivot.y = 70;
-		const { x, y } = this.master ? { x: this.grid.pivot.x, y: this.grid.pivot.y } : this.getLocalPos();
-		this.position.set(x, y);
 		this.addChild(this.mark);
+	}
+	_createUpdateHook() {
+		Hooks.on(`preUpdate${this.type}`, (scene, data, update, options) => {
+			if (data._id != this.object.id || options.subgrid) return;
+			if (update.x || update.y) options.animate = false;
+		});
+		Hooks.on(`update${this.type}`, (scene, data, update, options) => {
+			if (data._id != this.object.id || options.subgrid) return;
+			
+			if (update.rotation != undefined) {
+				this.relativeAngle = this.object.data.rotation - this.angle;
+			}
+
+			if (update.x || update.y) {
+				this.object.x = update.x ?? this.object.data.x;
+				this.object.y = update.y ?? this.object.data.y;
+				this.setPosition();		
+			}
+		});
+	}
+	setPosition() {
+		const { x, y } = this.options.master ? { x: this.grid.pivot.x, y: this.grid.pivot.y } : this.getLocalPos();
+		this.position.set(x, y);
 	}
 	getCanvasPos() {
 		const { x, y } = this.toGlobal(new PIXI.Point());
@@ -222,15 +264,13 @@ class Marker extends PIXI.Container {
 	static getCenterOffsetPos(o, x, y, reverse) {
 		return { x, y };
 	}
-	getLocalPos() {
-		const { x, y } = this.grid.toLocal(this.position, this.object);
+	static getLocalPos(grid, tx, ty) {
+		const { x, y } = grid.toLocal(grid.reference.position, new PIXI.Point(tx, ty));
 		return this._getCenterOffsetPos(x, y);
 	}
-
-	doHighlight(x, y) {
-		if (!this.highlightLayer) this.highlightLayer = this.addChild(new GridHighlight("sub_highlight"));
-
-		this.highlightGridPosition(this.highlightLayer, { x, y, color: 0xFF0000, border: 0x0000FF })
+	getLocalPos() {
+		const { x, y } = this.grid.toLocal(this.grid.reference.position, this.object);
+		return this._getCenterOffsetPos(x, y);
 	}
 }
 class TokenMarker extends Marker {
@@ -244,6 +284,7 @@ class TokenMarker extends Marker {
 			y: y + o.h / 2
 		};
 	}
+	get type() { return "Token"; }
 }
 class TileMarker extends Marker {
 	/** @override */
@@ -257,6 +298,7 @@ class TileMarker extends Marker {
 			y: y + i.height / 2
 		};
 	}
+	get type() { return "Tile"; }
 }
 class Boat extends SubGrid {
 	sailTo = function (x, y) {
