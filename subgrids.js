@@ -1,12 +1,4 @@
 /**
- * @example
- * let theBoat = startBoat(2000, 3000, 1000, 1000, 140)
- * theBoat.addObject(_token)
- * theBoat.sailTo(1900, 2400)
- * theBoat.pullObjects()
- */
-
-/**
  * Main class for Sub Grids
  * supports only square grids.
  *
@@ -300,31 +292,6 @@ class TileMarker extends Marker {
 	}
 	get type() { return "Tile"; }
 }
-class Boat extends SubGrid {
-	sailTo = function (x, y) {
-		this.x = x;
-		this.y = y;
-
-		this.pullObjects();
-	}
-	hardToStarboard = function () {
-		this.angle += 90;
-		this.pullObjects(90);
-	}
-	hardToPort = function () {
-		this.angle -= 90;
-		this.pullObjects(-90);
-	}
-	turn(degrees) {
-		this.angle += degrees;
-		this.pullObjects(degrees);
-	}
-	scuttle = function () {
-		this.destroy();
-	}
-	
-}
-
 window.SUBGRIDS = [];
 
 function startBoat(x, y, ...args) {
