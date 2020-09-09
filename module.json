@@ -3,7 +3,7 @@
 	"title": "Sub-Grids",
 	"description": "Create sub-grids.",
 	"author": "zeel",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"minimumCoreVersion": "0.6.6",
 	"compatibleCoreVersion": "0.6.6",
 	"scripts": [
@@ -19,7 +19,7 @@
 			"path": "lang/en.json"
 		}
 	],
-	"manifest": "https://raw.githubusercontent.com/zeel01/    /master/module.json",
-	"url": "https://github.com/zeel01/    ",
-	"download": "https://github.com/zeel01/    /releases/download/v0.0.1/subgrids.zip"
+	"manifest": "https://raw.githubusercontent.com/zeel01/SubGrids/master/module.json",
+	"url": "https://github.com/zeel01/SubGrids",
+	"download": "https://github.com/zeel01/SubGrids/releases/download/v0.0.2/subgrids.zip"
 }
