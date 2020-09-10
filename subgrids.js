@@ -1,3 +1,33 @@
+/* Schema *//*
+{
+	name: "Grid Name",
+	dimensions: {
+		width,
+		height,
+		gridsize
+	},
+	position: {
+		x, y
+	},
+	master: {
+		objectId: "id",
+		type: "type",
+		options: {
+			highlight, master, mark
+		}
+	},
+	markers: [
+		{
+			objectId: "id",
+			type: "type",
+			options: {
+				highlight, master, mark
+			}
+		}
+	]
+}
+*/
+
 /**
  * Main class for Sub Grids
  * supports only square grids.
