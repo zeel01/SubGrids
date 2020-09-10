@@ -1,13 +1,13 @@
 /* Schema *//*
 {
 	name: "Grid Name",
-	dimensions: {
+	dims: {
 		width,
 		height,
-		gridsize
+		size
 	},
 	position: {
-		x, y
+		x, y, angle
 	},
 	master: {
 		objectId: "id",
@@ -43,8 +43,11 @@ class SubGrid extends SquareGrid {
 	 * @param {number} size - Width/Height of a grid square
 	 * @memberof SubGrid
 	 */
-	constructor(width, height, master) {
+	constructor(name, width, height, master, options={}) {
 		const size = canvas.scene.data.grid;
+
+		const w = width, h = height;
+
 		width = width * size;
 		height = height * size;
 
@@ -57,15 +60,20 @@ class SubGrid extends SquareGrid {
 		})
 
 		this.dims = {
-			width, height, size
+			width, height, size, w, h
 		}
+
+	//	this.options = options;
+		this.name = name;
 		
 		this.pivot.x = width / 2;
 		this.pivot.y = height / 2;
-
+		
+		this.markers = [];
+		
 		if (master) this.setMaster(master);
 
-		this.markers = [];
+		
 		this.draw();
 
 		this.reference = this.addChild(new PIXI.Container());
@@ -98,9 +106,26 @@ class SubGrid extends SquareGrid {
 		this.background = background;
 		this.addChild(background);
 	}
+	_updateFlags() {
+		canvas.scene.setFlag("subgrids", `grids.${this.name}`, this.data);
+	}
 	addObjects() {
 		canvas.tiles.controlled.forEach(t => this.addTile(t));
 		canvas.tokens.controlled.forEach(t => this.addToken(t));
+	}
+	get data() {
+		return {
+			name: "",
+			dims: this.dims,
+			options: this.options,
+			position: {
+				x: this.position.x,
+				y: this.position.y,
+				angle: this.angle
+			},
+			master: this.master.data,
+			markers: this.markers.map(m => m.data),
+		}
 	}
 	/**
 	 * Add a Marker
@@ -111,6 +136,8 @@ class SubGrid extends SquareGrid {
 	add(mark) {
 		this.addChild(mark);
 		this.markers.push(mark);
+
+		this._updateFlags();
 	}
 	addToken(tkn) {
 		if (this.alreadyHas(tkn)) return;
@@ -132,16 +159,18 @@ class SubGrid extends SquareGrid {
 		this.master = new TokenMarker(object, this, { master: true });
 		this.addChild(this.master);
 
+		this._updateFlags();
+
 		let { x, y } = this.master._getCenterOffsetPos(object.x, object.y);
 		this.x = x;
 		this.y = y;
 
-		Hooks.on("preUpdateToken", (scene, data, update, options) => {
+		Hooks.on("preUpdateToken", async (scene, data, update, options) => {
 			if (data._id != this.master.object.id) return;
 
 			if (update.rotation != undefined) {
 				this.angle = update.rotation;
-				this.pullObjects(update.rotation);
+				await this.pullObjects(update.rotation);
 			}
 
 			if (update.x || update.y) {
@@ -153,8 +182,10 @@ class SubGrid extends SquareGrid {
 
 				options.animate = false;
 
-				this.pullObjects();
+				await this.pullObjects();
 			}
+
+			this._updateFlags();
 		});
 	}
 	async pullObjects(angle) {
@@ -208,6 +239,13 @@ class Marker extends PIXI.Container {
 	}
 
 	get type() { return null; }
+	get data() {
+		return {
+			id: this.object.id,
+			type: this.type,
+			options: this.options
+		}
+	}
 
 	async pull(angle) {
 		const data = this.getCanvasPos();
@@ -321,7 +359,6 @@ class TileMarker extends Marker {
 	}
 	get type() { return "Tile"; }
 }
-window.SUBGRIDS = [];
 
 function startBoat(x, y, ...args) {
 	const theBoat = new Boat(...args);
@@ -341,7 +378,7 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 	button.classList.add("subgrid-ctr");
 	button.innerHTML = `<i class="fas fa-th"></i>`
 
-	const hasGrid = window.SUBGRIDS.find(grid => grid.master.object.id == hud.object.id);
+	const hasGrid = canvas.subgrids.find(grid => grid.master.object.id == hud.object.id);
 
 	if (hasGrid) {
 		button.innerHTML = `<i class="fas fa-plus"></i>`
@@ -358,22 +395,25 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 			new Dialog({
 				title: game.i18n.localize("Create Subgrid"),
 				content: `
+					<label>${"Name (unique)"}</label>
+					<input type="text" name="name" value="grid${randomID()}" placeholder="name"><br>
 					<label>${"Width (squares)"}</label>
-					<input type="number" name="width" placeholder="width"><br>
+					<input type="number" name="width" value="5" placeholder="width"><br>
 					<label>${"Height (squares)"}</label>
-					<input type="number" name="height" placeholder="height">
+					<input type="number" name="height" value="5" placeholder="height">
 				`,
 				buttons: {
 					submit: {
 						icon: `<i class="fas fa-check"></i>`,
 						label: "Create",
 						callback: (html) => {
+							const name = html.find("[name=name]").val();
 							const width  = parseInt(html.find("[name=width]").val());
 							const height = parseInt(html.find("[name=height]").val());
 
-							const grid = new SubGrid(width, height, hud.object);
+							const grid = new SubGrid(name, width, height, hud.object);
 							canvas.grid.addChild(grid);
-							window.SUBGRIDS.push(grid);
+							canvas.subgrids.push(grid);
 
 							grid.setMaster(hud.object);
 						}
@@ -392,4 +432,21 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 		});
 	}
 	html.find("div.left").append(button);
+});
+
+Hooks.on("canvasReady", (canvas) => {
+	canvas.subgrids = [];
+
+	const subData = canvas.scene.getFlag("subgrids", "grids");
+	if (!subData || typeof subData != "object") return;
+
+	canvas.subgrids = Object.values(subData).map(g => {
+		const master = canvas.tokens.placeables.find(t => t.id == g.master.id);
+		if (!master) return null;
+
+		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master);
+		canvas.grid.addChild(grid);
+
+		return grid;
+	});
 });
