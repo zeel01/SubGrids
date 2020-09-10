@@ -144,7 +144,7 @@ class SubGrid extends SquareGrid {
 	}
 	inBounds(object) {
 		const bounds = this.globalBounds();
-		const mark = object instanceof Token ? new TokenMarker(object, this, { highlight: false }) : new TileMarker(object, this);
+		const mark = object instanceof Token ? new TokenMarker(object, this, { highlight: false }) : new TileMarker(object, this, { highlight: false });
 		const cp = this.addChild(mark).getCanvasPos();
 		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
 		 
@@ -187,6 +187,10 @@ class Marker extends PIXI.Container {
 	_highlight() {
 		this.object._hover = true;
 		this.object.refresh();
+		window.setTimeout(() => {
+			this.object._hover = false;
+			this.object.refresh();
+		}, 300);
 	}
 	_drawMarker() {
 		this.mark = new PIXI.Graphics();
@@ -210,13 +214,12 @@ class Marker extends PIXI.Container {
 			}
 
 			if (update.x || update.y) {
-				this.object.x = update.x ?? this.object.data.x;
-				this.object.y = update.y ?? this.object.data.y;
 				this.setPosition();		
 			}
 		});
 	}
 	setPosition() {
+		this.object.refresh();
 		const { x, y } = this.options.master ? { x: this.grid.pivot.x, y: this.grid.pivot.y } : this.getLocalPos();
 		this.position.set(x, y);
 	}
@@ -255,10 +258,6 @@ class Marker extends PIXI.Container {
 	 */
 	static getCenterOffsetPos(o, x, y, reverse) {
 		return { x, y };
-	}
-	static getLocalPos(grid, tx, ty) {
-		const { x, y } = grid.toLocal(grid.reference.position, new PIXI.Point(tx, ty));
-		return this._getCenterOffsetPos(x, y);
 	}
 	getLocalPos() {
 		const { x, y } = this.grid.toLocal(this.grid.reference.position, this.object);
