@@ -92,8 +92,8 @@ class SubGrid extends SquareGrid {
 		this.add(new TileMarker(tile, this));
 	}
 	autoAddObjects() {
-		canvas.tiles.objects.children.forEach(t => this.inBounds(t) ? this.addTile(t) : null);
-		canvas.tokens.objects.children.forEach(t => this.inBounds(t) ? this.addToken(t) : null);
+		canvas.tiles.placeables.forEach(t => this.inBounds(t) ? this.addTile(t) : null);
+		canvas.tokens.placeables.forEach(t => this.inBounds(t) ? this.addToken(t) : null);
 	}
 	alreadyHas(obj) {
 		return this.markers.some(m => m.object.id == obj.id);
