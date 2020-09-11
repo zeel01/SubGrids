@@ -115,7 +115,7 @@ class SubGrid extends SquareGrid {
 	}
 	get data() {
 		return {
-			name: "",
+			name: this.name,
 			dims: this.dims,
 			options: this.options,
 			position: {
@@ -151,6 +151,26 @@ class SubGrid extends SquareGrid {
 	autoAddObjects() {
 		canvas.tiles.placeables.forEach(t => this.inBounds(t) ? this.addTile(t) : null);
 		canvas.tokens.placeables.forEach(t => this.inBounds(t) ? this.addToken(t) : null);
+	}
+	addList(list) {
+		this.addListByType(list, "Tile", canvas.tiles, this.addTile);
+		this.addListByType(list, "Token", canvas.tokens, this.addToken);
+	}
+	/**
+	 * Add objects of a particular type from a list
+	 *
+	 * @param {object[]} list - List of data describing objects to add.
+	 * @param {string} type - The name of the type of object.
+	 * @param {PlaceablesLayer} layer - The canvas later this object resides on.
+	 * @param {function} adder - The method which is used to add that type of object.
+	 * @memberof SubGrid
+	 */
+	addListByType(list, type, layer, adder) {
+		const objects = list.filter(m => m.type == type);
+		const objIds = objects.map(t => t.id);
+		layer.placeables.forEach(
+			o => this.inBounds(o) && objIds.includes(o.id) ? adder.call(this, o) : null
+		);
 	}
 	alreadyHas(obj) {
 		return this.markers.some(m => m.object.id == obj.id);
@@ -235,7 +255,7 @@ class Marker extends PIXI.Container {
 
 		if (options.highlight) this._highlight();
 
-		this._createUpdateHook();
+		if (!options.master) this._createUpdateHook();
 	}
 
 	get type() { return null; }
@@ -446,6 +466,8 @@ Hooks.on("canvasReady", (canvas) => {
 
 		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master);
 		canvas.grid.addChild(grid);
+
+		grid.addList(g.markers);
 
 		return grid;
 	});
