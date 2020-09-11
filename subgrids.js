@@ -17,7 +17,7 @@ class SubGrid extends SquareGrid {
 	 * @param {number} size - Width/Height of a grid square
 	 * @memberof SubGrid
 	 */
-	constructor(name, width, height, master, options={}) {
+	constructor(name, width, height, master, options={ angle: 0 }) {
 		const size = canvas.scene.data.grid;
 
 		const w = width, h = height;
@@ -42,6 +42,7 @@ class SubGrid extends SquareGrid {
 		
 		this.pivot.x = width / 2;
 		this.pivot.y = height / 2;
+	//	this.angle = options.angle;
 		
 		this.markers = [];
 		
@@ -158,6 +159,7 @@ class SubGrid extends SquareGrid {
 		let { x, y } = this.master._getCenterOffsetPos(object.x, object.y);
 		this.x = x;
 		this.y = y;
+		this.angle = this.master.object.data.rotation ?? 0;
 	}
 	async preUpdateMaster(data, update, options) {
 		if (update.rotation != undefined) {
@@ -211,7 +213,7 @@ class SubGrid extends SquareGrid {
 }
 
 class Marker extends PIXI.Container {
-	constructor(object, grid, options={ master: false, mark: false, highlight: true }) {
+	constructor(object, grid, options={ master: false, mark: true, highlight: true }) {
 		super();
 
 		this.options = options;
@@ -425,7 +427,7 @@ Hooks.on("canvasReady", (canvas) => {
 		const master = canvas.tokens.placeables.find(t => t.id == g.master.id);
 		if (!master) return null;
 
-		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master);
+		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master, { angle: g.position.angle });
 		canvas.grid.addChild(grid);
 
 		grid.addList(g.markers);
