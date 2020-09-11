@@ -1,32 +1,6 @@
-/* Schema *//*
-{
-	name: "Grid Name",
-	dims: {
-		width,
-		height,
-		size
-	},
-	position: {
-		x, y, angle
-	},
-	master: {
-		objectId: "id",
-		type: "type",
-		options: {
-			highlight, master, mark
-		}
-	},
-	markers: [
-		{
-			objectId: "id",
-			type: "type",
-			options: {
-				highlight, master, mark
-			}
-		}
-	]
-}
-*/
+/**
+ * Request: https://discordapp.com/channels/732325252788387980/733339683278422068/751258458501808165
+ */
 
 /**
  * Main class for Sub Grids
