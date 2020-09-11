@@ -184,29 +184,26 @@ class SubGrid extends SquareGrid {
 		let { x, y } = this.master._getCenterOffsetPos(object.x, object.y);
 		this.x = x;
 		this.y = y;
+	}
+	async preUpdateMaster(data, update, options) {
+		if (update.rotation != undefined) {
+			this.angle = update.rotation;
+			await this.pullObjects(update.rotation);
+		}
 
-		Hooks.on("preUpdateToken", async (scene, data, update, options) => {
-			if (data._id != this.master.object.id) return;
+		if (update.x || update.y) {
+			let nx = update.x ?? data.x;
+			let ny = update.y ?? data.y;
+			let { x, y } = this.master._getCenterOffsetPos(nx, ny);
+			this.x = x;
+			this.y = y;
 
-			if (update.rotation != undefined) {
-				this.angle = update.rotation;
-				await this.pullObjects(update.rotation);
-			}
+			options.animate = false;
 
-			if (update.x || update.y) {
-				let nx = update.x ?? data.x;
-				let ny = update.y ?? data.y;
-				let { x, y } = this.master._getCenterOffsetPos(nx, ny);
-				this.x = x;
-				this.y = y;
+			await this.pullObjects();
+		}
 
-				options.animate = false;
-
-				await this.pullObjects();
-			}
-
-			this._updateFlags();
-		});
+		this._updateFlags();
 	}
 	async pullObjects(angle) {
 		for (let i = 0; i < this.markers.length; i++) 
@@ -254,8 +251,6 @@ class Marker extends PIXI.Container {
 		this.relativeAngle = this.object.data.rotation - this.angle;
 
 		if (options.highlight) this._highlight();
-
-		if (!options.master) this._createUpdateHook();
 	}
 
 	get type() { return null; }
@@ -289,22 +284,14 @@ class Marker extends PIXI.Container {
 		this.mark.pivot.y = 70;
 		this.addChild(this.mark);
 	}
-	_createUpdateHook() {
-		Hooks.on(`preUpdate${this.type}`, (scene, data, update, options) => {
-			if (data._id != this.object.id || options.subgrid) return;
-			if (update.x || update.y) options.animate = false;
-		});
-		Hooks.on(`update${this.type}`, (scene, data, update, options) => {
-			if (data._id != this.object.id || options.subgrid) return;
-			
-			if (update.rotation != undefined) {
-				this.relativeAngle = this.object.data.rotation - this.angle;
-			}
+	updateObject(update) {	
+		if (update.rotation != undefined) {
+			this.relativeAngle = this.object.data.rotation - this.angle;
+		}
 
-			if (update.x || update.y) {
-				this.setPosition();		
-			}
-		});
+		if (update.x || update.y) {
+			this.setPosition();		
+		}
 	}
 	setPosition() {
 		this.object.refresh();
@@ -472,3 +459,40 @@ Hooks.on("canvasReady", (canvas) => {
 		return grid;
 	});
 });
+
+class SubGridHooks {
+	static async preUpdatePlaceable(type, scene, data, update, options) {
+		if (options.subgrid) return;
+
+		this.preUpdateMasters(data, update, options);
+		
+		this.preventAnimation(data, update, options);
+	}
+	static async updatePlaceable(type, scene, data, update, options) {
+		if (options.subgrid) return;
+
+		for (let grid of canvas.subgrids) {
+			grid.markers.find(
+				m => m.object.id == data._id
+			)?.updateObject(update);
+		}
+	}
+	static preventAnimation(data, update, options) {
+		if (!(update.x || update.y)) return;
+		if (canvas.subgrids.some(
+				grid => grid.markers.some(m => m.object.id == data._id)
+		)) options.animate = false;
+	}
+	static async preUpdateMasters(data, update, options) {
+		for (let grid of canvas.subgrids) {
+			if (data._id != grid.master.object.id) continue;
+			await grid.preUpdateMaster(...arguments);
+		}
+	}
+}
+
+Hooks.on("preUpdateToken", (...args) => SubGridHooks.preUpdatePlaceable("Token", ...args));
+Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("Tile", ...args));
+
+Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("Token", ...args));
+Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("Tile", ...args));
