@@ -6,7 +6,8 @@ const zip = require("gulp-zip");
 function createRelease(cb) {
 	return Gulp.src([
 		"module.json",
-		"subgrids.js"
+		"subgrids.js",
+		"lang/*"
 	], { base: "." })
 		.pipe(zip("subgrids.zip"))
 		.pipe(Gulp.dest("./"));
