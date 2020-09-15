@@ -115,21 +115,27 @@ class SubGrid extends SquareGrid {
 		this._updateFlags();
 	}
 	addToken(tkn) {
-		if (this.alreadyHas(tkn)) return;
 		if (tkn.id == this.master.object.id) return;
 		this.add(new TokenMarker(tkn, this));
 	}
 	addTile(tile) {
-		if (this.alreadyHas(tile)) return;
 		this.add(new TileMarker(tile, this));
 	}
+	addLight(light) {
+		this.add(new LightMarker(light, this));
+	}
+	canAdd(obj) {
+		return this.inBounds(obj) && !this.alreadyHas(obj);
+	}
 	autoAddObjects() {
-		canvas.tiles.placeables.forEach(t => this.inBounds(t) ? this.addTile(t) : null);
-		canvas.tokens.placeables.forEach(t => this.inBounds(t) ? this.addToken(t) : null);
+		canvas.tiles.placeables.forEach(t => this.canAdd(t) ? this.addTile(t) : null);
+		canvas.tokens.placeables.forEach(t => this.canAdd(t) ? this.addToken(t) : null);
+		canvas.lighting.placeables.forEach(l => this.canAdd(l) ? this.addLight(l) : null);
 	}
 	addList(list) {
 		this.addListByType(list, "Tile", canvas.tiles, this.addTile);
 		this.addListByType(list, "Token", canvas.tokens, this.addToken);
+		this.addListByType(list, "Light", canvas.lighting, this.addLight);
 	}
 	/**
 	 * Add objects of a particular type from a list
@@ -196,9 +202,16 @@ class SubGrid extends SquareGrid {
 
 		return new PIXI.Rectangle(nx, ny, w, h);
 	}
+	static getMarkerClass(object) {
+		if (object instanceof Token) return TokenMarker;
+		if (object instanceof Tile) return TileMarker;
+		if (object instanceof AmbientLight) return LightMarker;
+		
+		return Marker;
+	}
 	inBounds(object) {
 		const bounds = this.globalBounds();
-		const mark = object instanceof Token ? new TokenMarker(object, this, { highlight: false }) : new TileMarker(object, this, { highlight: false });
+		const mark = new (this.constructor.getMarkerClass(object))(object, this, { highlight: false });
 		const cp = this.addChild(mark).getCanvasPos();
 		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
 		 
@@ -213,7 +226,7 @@ class SubGrid extends SquareGrid {
 }
 
 class Marker extends PIXI.Container {
-	constructor(object, grid, options={ master: false, mark: true, highlight: true }) {
+	constructor(object, grid, options={ master: false, mark: false, highlight: true }) {
 		super();
 
 		this.options = options;
@@ -224,7 +237,7 @@ class Marker extends PIXI.Container {
 		if (options.mark) this._drawMarker();
 		this.setPosition();
 
-		this.relativeAngle = this.object.data.rotation - this.angle;
+		this.relativeAngle = this.object.data.rotation - this.grid.angle;
 
 		if (options.highlight) this._highlight();
 	}
@@ -353,7 +366,9 @@ class TileMarker extends Marker {
 	}
 	get type() { return "Tile"; }
 }
-
+class LightMarker extends Marker {
+	get type() { return "Light" };
+}
 function startBoat(x, y, ...args) {
 	const theBoat = new Boat(...args);
 	theBoat.x = x;
@@ -483,3 +498,4 @@ Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("Tile", .
 
 Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("Token", ...args));
 Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("Tile", ...args));
+Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("Light", ...args));
