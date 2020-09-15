@@ -17,7 +17,7 @@ class SubGrid extends SquareGrid {
 	 * @param {number} size - Width/Height of a grid square
 	 * @memberof SubGrid
 	 */
-	constructor(name, width, height, master, options={ angle: 0 }) {
+	constructor(name, width, height, master, options={ angle: 0, skipUpdates: false }) {
 		const size = canvas.scene.data.grid;
 
 		const w = width, h = height;
@@ -39,6 +39,7 @@ class SubGrid extends SquareGrid {
 
 	//	this.options = options;
 		this.name = name;
+		this.skipUpdates = options.skipUpdates;
 		
 		this.pivot.x = width / 2;
 		this.pivot.y = height / 2;
@@ -82,7 +83,13 @@ class SubGrid extends SquareGrid {
 		this.addChild(background);
 	}
 	_updateFlags() {
-		canvas.scene.setFlag("subgrids", `grids.${this.name}`, this.data);
+		if (this.skipUpdates) return;
+
+		canvas.scene.update({ 
+			[`flags.subgrids.grids.${this.name}`]: this.data
+		}, {
+			subgrid: true
+		});
 	}
 	addObjects() {
 		canvas.tiles.controlled.forEach(t => this.addTile(t));
@@ -188,6 +195,8 @@ class SubGrid extends SquareGrid {
 		this._updateFlags();
 	}
 	async pullObjects(angle) {
+		if (this.skipUpdates) return;
+
 		for (let i = 0; i < this.markers.length; i++) 
 			await this.markers[i].pull(angle);
 		return this;
@@ -222,6 +231,9 @@ class SubGrid extends SquareGrid {
 		if (!this.highlightLayer) this.highlightLayer = this.addChild(new GridHighlight("sub_highlight"));
 
 		this.highlightGridPosition(this.highlightLayer, { x, y, color: 0xFF0000, border: 0x0000FF })
+	}
+	refresh(data) {
+		//
 	}
 }
 
@@ -453,7 +465,7 @@ Hooks.on("canvasReady", (canvas) => {
 		const master = canvas.tokens.placeables.find(t => t.id == g.master.id);
 		if (!master) return null;
 
-		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master, { angle: g.position.angle });
+		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master, { angle: g.position.angle, skipUpdates: !SubGridManager.isGridMaster });
 		canvas.grid.addChild(grid);
 
 		grid.addList(g.markers);
@@ -463,15 +475,20 @@ Hooks.on("canvasReady", (canvas) => {
 });
 
 class SubGridHooks {
+	static readyHook() {
+		game.socket.on("module.subgrids", SubGridManager.handleIncomingSocket);
+	}
 	static async preUpdatePlaceable(type, scene, data, update, options) {
 		if (options.subgrid) return;
 
-		this.preUpdateMasters(data, update, options);
+		if (SubGridManager.isGridMaster) this.preUpdateMasters(data, update, options);
 		
 		this.preventAnimation(data, update, options);
 	}
 	static async updatePlaceable(type, scene, data, update, options) {
 		if (options.subgrid) return;
+
+		if (!SubGridManager.isGridMaster) this.preUpdateMasters(data, update, options);
 
 		for (let grid of canvas.subgrids) {
 			grid.markers.find(
@@ -491,7 +508,28 @@ class SubGridHooks {
 			await grid.preUpdateMaster(...arguments);
 		}
 	}
+//	static updateScene(scene, data, options) {
+//		if (!options.subgrid) return;
+//		data.flags.subgrids.grids.forEach(gd => {
+//			canvas.subgrids.find(g => g.name == gd.name).refresh(gd);
+//		});
+//	}
 }
+
+class SubGridManager {
+	static handleIncomingSocket({ command, options }) {
+		if (!command) return;
+
+		switch (command) {
+			case "refresh": break;
+		}
+	}
+	static get isGridMaster() {
+		return game.user.isGM;
+	}
+}
+
+Hooks.once("ready", () => SubGridHooks.readyHook());
 
 Hooks.on("preUpdateToken", (...args) => SubGridHooks.preUpdatePlaceable("Token", ...args));
 Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("Tile", ...args));
@@ -499,3 +537,5 @@ Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("Tile", .
 Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("Token", ...args));
 Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("Tile", ...args));
 Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("Light", ...args));
+
+//Hooks.on("updateScene", (...args) => SubGridHooks.updateScene(...args));
