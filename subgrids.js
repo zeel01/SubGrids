@@ -275,13 +275,11 @@ class Marker extends PIXI.Container {
 		this.position.set(x, y);
 	}
 	getCanvasPos() {
-		const { x, y } = this.toGlobal(new PIXI.Point());
-		const t = canvas.stage.worldTransform;
-		let nx = (x - t.tx) / canvas.stage.scale.x;
-		let ny = (y - t.ty) / canvas.stage.scale.y;
-		
+		// Convert the position of this object to one local to the canvas
+		const { x, y } = canvas.stage.toLocal(new PIXI.Point(), this);
 
-		return this._getCenterOffsetPos(nx, ny, true);;
+		// Then get the reverse center offset, giving the position of the upper-left corner.
+		return this._getCenterOffsetPos(x, y, true);
 	}
 	/**
 	 * Forwards call to static version, passing this.object
@@ -311,8 +309,21 @@ class Marker extends PIXI.Container {
 		return { x, y };
 	}
 	getLocalPos() {
-		const { x, y } = this.grid.toLocal(this.grid.reference.position, this.object);
-		return this._getCenterOffsetPos(x, y);
+		// Find the center point of the objebt
+		const cp = this._getCenterOffsetPos(this.object.x, this.object.y);
+
+		// Create a temporary PIXI object there
+		const center = new PIXI.Container();
+		canvas.stage.addChild(center);
+		center.position.set(cp.x, cp.y);
+
+		// Convert that reference to a local position
+		const { x, y } = this.grid.toLocal(new PIXI.Point(), center);
+
+		// Remove the temporary object
+		canvas.stage.removeChild(center);
+
+		return { x, y };
 	}
 }
 class TokenMarker extends Marker {
