@@ -391,6 +391,39 @@ function startBoat(x, y, ...args) {
 
 	window.theBoat = theBoat;
 }
+class SubGridSheet extends FormApplication {
+	constructor(...args) {
+		super(...args);
+	}
+	static get defaultOptions() {
+		return mergeObject(super.defaultOptions, {
+			classes: ['subgrids'],
+			width: 600,
+			height: 400,
+			title: 'Edit Grid',
+		});
+	}
+	get template() {
+		return `modules/subgrids/grid-sheet.html`;
+	}
+
+	getData() {
+		// Return data to the template
+		const data = {};
+
+		data.randomID = randomID();
+
+		return data;
+	}
+
+	activateListeners(html) {
+		super.activateListeners(html);
+
+	}
+	async _updateObject(event, formData) {
+		console.log(formData.exampleInput);
+	}
+}
 
 Hooks.on("renderTokenHUD", (hud, html) => {
 	let button = document.createElement("div");
@@ -413,7 +446,8 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 		button.title = game.i18n.localize("Create Subgrid");
 
 		$(button).click((event) => {
-			new Dialog({
+			new SubGridSheet(hud.object).render(true);
+		/*	new Dialog({
 				title: game.i18n.localize("Create Subgrid"),
 				content: `
 					<label>${"Name (unique)"}</label>
@@ -449,7 +483,7 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 				},
 				default: "submit"
 			}).render(true);
-			
+			*/
 		});
 	}
 	html.find("div.left").append(button);

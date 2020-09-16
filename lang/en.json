@@ -1,3 +1,12 @@
 {
-	
+	"subgrids.title": "Grid Master",
+	"subgrids.editGrid": "Edit Grid",
+	"subgrids.widthSq": "Width (squares)",
+	"subgrids.heightSq": "Height (squares)",
+	"subgrids.name": "Name",
+	"subgrids.gridSize": "Grid Size (px)",
+	"subgrids.gridColor": "Grid Color",
+	"subgrids.backgroundColor": "Background Color",
+	"subgrid.backgroundAlpha": "Background Opacity",
+	"subgrids.editTooltip": "Create or Edit Subgrid"
 }
