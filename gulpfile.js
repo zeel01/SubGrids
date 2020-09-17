@@ -7,6 +7,7 @@ function createRelease(cb) {
 	return Gulp.src([
 		"module.json",
 		"subgrids.js",
+		"grid-sheet.html",
 		"lang/*"
 	], { base: "." })
 		.pipe(zip("subgrids.zip"))
