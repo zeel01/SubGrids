@@ -155,6 +155,18 @@ class SubGrid extends SquareGrid {
 			markers: this.markers.map(m => m.data),
 		}
 	}
+
+	get areaMask() {
+		//if (!this._areaMask) 
+			this._createAreaMask();
+
+		return this._areaMask;
+	}
+	_createAreaMask() {
+		this._areaMask = canvas.app.renderer.extract
+			.pixels(this)
+			.filter((e, i) => ++i % 4 == 0);
+	}
 	/**
 	 * Add a Marker
 	 *
@@ -266,7 +278,7 @@ class SubGrid extends SquareGrid {
 		
 		return Marker;
 	}
-	inBounds(object) {
+	inOuterBounds(object) {
 		const bounds = this.globalBounds();
 		const mark = new (this.constructor.getMarkerClass(object))(object, this, { highlight: false });
 		const cp = this.addChild(mark).getCanvasPos();
@@ -274,6 +286,17 @@ class SubGrid extends SquareGrid {
 		 
 		this.removeChild(mark);
 		return bounds.contains(x, y);
+	}
+	inInnerBounds(object) {
+		const bounds = new PIXI.Rectangle(0, 0, this.width, this.height);
+		const mark = new (this.constructor.getMarkerClass(object))(object, this, { highlight: false });
+		const cp = this.addChild(mark).getLocalPos();
+
+		this.removeChild(mark);
+		return bounds.contains(cp.x, cp.y);
+	}
+	inBounds(object) {
+		return this.inInnerBounds(object);
 	}
 	doHighlight(x, y) {
 		if (!this.highlightLayer) this.highlightLayer = this.addChild(new GridHighlight("sub_highlight"));
