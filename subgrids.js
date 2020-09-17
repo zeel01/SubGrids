@@ -105,16 +105,16 @@ class SubGrid extends SquareGrid {
 		canvas.tokens.controlled.forEach(t => this.addToken(t));
 	}
 	// Set width an height in grid squares, but save in pixels
-	set cellWidth(w) { this.width = w * this.size; }
-	set cellHeight(h) { this.height = h * this.size; }
+	set cellWidth(w) { this.width = parseInt(w) * this.size; }
+	set cellHeight(h) { this.height = parseInt(h) * this.size; }
 
 	// Set the width in pixels
 	set width(w) { 
-		this.options.dimensions.width = w;
+		this.options.dimensions.width = parseInt(w);
 		this._updatePivot();
 	}	
 	set height(h) { 
-		this.options.dimensions.height = h;
+		this.options.dimensions.height = parseInt(h);
 		this._updatePivot();
 	}
 
@@ -181,6 +181,8 @@ class SubGrid extends SquareGrid {
 		return this.inBounds(obj) && !this.alreadyHas(obj);
 	}
 	autoAddObjects() {
+		if (this.skipUpdates) return;
+
 		canvas.tiles.placeables.forEach(t => this.canAdd(t) ? this.addTile(t) : null);
 		canvas.tokens.placeables.forEach(t => this.canAdd(t) ? this.addToken(t) : null);
 		canvas.lighting.placeables.forEach(l => this.canAdd(l) ? this.addLight(l) : null);
@@ -549,12 +551,19 @@ class SubGridHooks {
 			await grid.preUpdateMaster(...arguments);
 		}
 	}
-//	static updateScene(scene, data, options) {
-//		if (!options.subgrid) return;
-//		data.flags.subgrids.grids.forEach(gd => {
-//			canvas.subgrids.find(g => g.name == gd.name).refresh(gd);
-//		});
-//	}
+	static updateScene(scene, data, options) {
+		if (!options.subgrid || SubGridManager.isGridMaster) return;
+		Object.values(scene.data.flags.subgrids.grids).forEach(gd => {
+			const grid = canvas.subgrids.find(g => g.name == gd.name);
+			if (!grid) return;
+
+			grid.name = gd.name ?? grid.name;
+			grid.cellWidth = gd.dimensions.cellWidth ?? grid.cellWidth;
+			grid.cellHeight = gd.dimensions.cellHeight ?? grid.cellHeight;
+
+			grid.redraw();
+		});
+	}
 }
 
 class SubGridManager {
@@ -579,4 +588,4 @@ Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("Token", ...ar
 Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("Tile", ...args));
 Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("Light", ...args));
 
-//Hooks.on("updateScene", (...args) => SubGridHooks.updateScene(...args));
+Hooks.on("updateScene", (...args) => SubGridHooks.updateScene(...args));
