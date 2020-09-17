@@ -20,8 +20,6 @@ class SubGrid extends SquareGrid {
 	constructor(name, width, height, master, options={ angle: 0, skipUpdates: false }) {
 		const size = canvas.scene.data.grid;
 
-		const w = width, h = height;
-
 		width = width * size;
 		height = height * size;
 
@@ -33,17 +31,11 @@ class SubGrid extends SquareGrid {
 			alpha: canvas.scene.data.gridAlpha
 		})
 
-		this.dims = {
-			width, height, size, w, h
-		}
-
 	//	this.options = options;
 		this.name = name;
 		this.skipUpdates = options.skipUpdates;
 		
-		this.pivot.x = width / 2;
-		this.pivot.y = height / 2;
-	//	this.angle = options.angle;
+		this._updatePivot();
 		
 		this.markers = [];
 		
@@ -64,9 +56,14 @@ class SubGrid extends SquareGrid {
 	 * @memberof SubGrid
 	 */
 	draw() {
+	//	this.clear();
 		super.draw();
 		this._drawBackground();
 	}
+//	clear() {
+//		this.removeChildren().forEach(c => c.destroy({ children: true }));
+//		return this;
+//	}
 	/**
 	 * Draw a rectangular background
 	 *
@@ -75,10 +72,8 @@ class SubGrid extends SquareGrid {
 	_drawBackground() {
 		const background = new PIXI.Graphics();
 		background.beginFill(0x003333, .3);
-		background.drawRect(0, 0, this.dims.width, this.dims.height);
+		background.drawRect(0, 0, this.width, this.height);
 		background.endFill();
-	//	background.width = this.options.dimensions.width;
-	//	background.height = this.options.dimensions.height;
 		this.background = background;
 		this.addChild(background);
 	}
@@ -86,19 +81,60 @@ class SubGrid extends SquareGrid {
 		if (this.skipUpdates) return;
 
 		canvas.scene.update({ 
-			[`flags.subgrids.grids.${this.name}`]: this.data
+			[`flags.subgrids.grids.${this.name}`]: duplicate(this.data)
 		}, {
 			subgrid: true
 		});
+	}
+	_updatePivot() {
+		this.pivot.x = this.width / 2;
+		this.pivot.y = this.height / 2;
 	}
 	addObjects() {
 		canvas.tiles.controlled.forEach(t => this.addTile(t));
 		canvas.tokens.controlled.forEach(t => this.addToken(t));
 	}
+	// Set width an height in grid squares, but save in pixels
+	set cellWidth(w) { this.width = w * this.size; }
+	set cellHeight(h) { this.height = h * this.size; }
+
+	// Set the width in pixels
+	set width(w) { 
+		this.options.dimensions.width = w;
+		this._updatePivot();
+	}	
+	set height(h) { 
+		this.options.dimensions.height = h;
+		this._updatePivot();
+	}
+
+	// Get the width and height from the stored size in pixels
+	get cellWidth() { return this.width / this.size; }
+	get cellHeight() { return this.height / this.size; }
+
+	// Get the size
+	get size() { return this.options.dimensions.size; }
+
+	// Get the width and height in pixels
+	get width() { return this.options.dimensions.width; }
+	get height() { return this.options.dimensions.height; }
+	
+	// Return all the dimensions as an object.
+	get dimensions() {
+		return {
+			width: this.width,
+			height: this.height,
+			size: this.size,
+			cellWidth: this.cellWidth,
+			cellHeight: this.cellHeight
+		}
+	}
+
+	// Get the important data about the grid
 	get data() {
 		return {
 			name: this.name,
-			dims: this.dims,
+			dimensions: this.dimensions,
 			options: this.options,
 			position: {
 				x: this.position.x,
@@ -381,16 +417,6 @@ class TileMarker extends Marker {
 class LightMarker extends Marker {
 	get type() { return "Light" };
 }
-function startBoat(x, y, ...args) {
-	const theBoat = new Boat(...args);
-	theBoat.x = x;
-	theBoat.y = y;
-	
-	theBoat.draw();
-	canvas.grid.addChild(theBoat);
-
-	window.theBoat = theBoat;
-}
 class SubGridSheet extends FormApplication {
 	constructor(...args) {
 		super(...args);
@@ -401,6 +427,10 @@ class SubGridSheet extends FormApplication {
 			width: 600,
 			height: 400,
 			title: 'Edit Grid',
+			editable: true,
+			submitOnChange: true,
+			closeOnSubmit: false,
+			submitOnClose: true
 		});
 	}
 	get template() {
@@ -411,7 +441,7 @@ class SubGridSheet extends FormApplication {
 		// Return data to the template
 		const data = {};
 
-		data.randomID = randomID();
+		data.object = this.object.data;
 
 		return data;
 	}
@@ -421,7 +451,14 @@ class SubGridSheet extends FormApplication {
 
 	}
 	async _updateObject(event, formData) {
-		console.log(formData.exampleInput);
+		console.log(formData);
+
+		this.object.name = formData.name;
+		this.object.cellWidth = formData.width;
+		this.object.cellHeight = formData.height;
+
+		this.object._updateFlags();
+		this.object.draw();
 	}
 }
 
@@ -431,61 +468,21 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 	button.classList.add("control-icon");
 	button.classList.add("subgrid-ctr");
 	button.innerHTML = `<i class="fas fa-th"></i>`
+	button.title = game.i18n.localize("subgrids.editTooltip");
+	
+	$(button).click((event) => {
+		const hasGrid = canvas.subgrids.find(grid => grid.master.object.id == hud.object.id);
+		const grid = hasGrid || new SubGrid(randomID(), 1, 1, hud.object);
+		if (!hasGrid) {
+			canvas.grid.addChild(grid);
+			canvas.subgrids.push(grid);
+			grid.setMaster(hud.object);
+		}
+		if (!grid.sheet) grid.sheet = new SubGridSheet(grid);
+		
+		grid.sheet.render(true);
+	});
 
-	const hasGrid = canvas.subgrids.find(grid => grid.master.object.id == hud.object.id);
-
-	if (hasGrid) {
-		button.innerHTML = `<i class="fas fa-plus"></i>`
-		button.title = game.i18n.localize("Add to Subgrid");
-
-		$(button).click((event) => {
-			hasGrid.autoAddObjects();
-		});
-	}
-	else {
-		button.title = game.i18n.localize("Create Subgrid");
-
-		$(button).click((event) => {
-			new SubGridSheet(hud.object).render(true);
-		/*	new Dialog({
-				title: game.i18n.localize("Create Subgrid"),
-				content: `
-					<label>${"Name (unique)"}</label>
-					<input type="text" name="name" value="grid${randomID()}" placeholder="name"><br>
-					<label>${"Width (squares)"}</label>
-					<input type="number" name="width" value="5" placeholder="width"><br>
-					<label>${"Height (squares)"}</label>
-					<input type="number" name="height" value="5" placeholder="height">
-				`,
-				buttons: {
-					submit: {
-						icon: `<i class="fas fa-check"></i>`,
-						label: "Create",
-						callback: (html) => {
-							const name = html.find("[name=name]").val();
-							const width  = parseInt(html.find("[name=width]").val());
-							const height = parseInt(html.find("[name=height]").val());
-
-							const grid = new SubGrid(name, width, height, hud.object);
-							canvas.grid.addChild(grid);
-							canvas.subgrids.push(grid);
-
-							grid.setMaster(hud.object);
-						}
-					},
-					cancel: {
-						icon: '<i class="fas fa-times"></i>',
-						label: "Cancel",
-						callback: () => {
-							
-						}
-					}
-				},
-				default: "submit"
-			}).render(true);
-			*/
-		});
-	}
 	html.find("div.left").append(button);
 });
 
@@ -499,7 +496,7 @@ Hooks.on("canvasReady", (canvas) => {
 		const master = canvas.tokens.placeables.find(t => t.id == g.master.id);
 		if (!master) return null;
 
-		const grid = new SubGrid(g.name, g.dims.w, g.dims.h, master, { angle: g.position.angle, skipUpdates: !SubGridManager.isGridMaster });
+		const grid = new SubGrid(g.name, g.dimensions.cellWidth, g.dimensions.cellHeight, master, { angle: g.position.angle, skipUpdates: !SubGridManager.isGridMaster });
 		canvas.grid.addChild(grid);
 
 		grid.addList(g.markers);
