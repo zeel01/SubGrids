@@ -48,6 +48,8 @@ class SubGrid extends SquareGrid {
 
 		this.transform.scale.x = 1;
 		this.transform.scale.y = 1;
+
+		this.autoAddObjects();
 	}
 	/**
 	 * Draws the subgrid.
@@ -56,14 +58,22 @@ class SubGrid extends SquareGrid {
 	 * @memberof SubGrid
 	 */
 	draw() {
-	//	this.clear();
 		super.draw();
 		this._drawBackground();
 	}
-//	clear() {
-//		this.removeChildren().forEach(c => c.destroy({ children: true }));
-//		return this;
-//	}
+	redraw() {
+		this.clear();
+		this.addChild(this.master);
+		this.draw();
+		this.autoAddObjects();
+	}
+	clear() {
+		this.removeChildren().forEach(c => {
+			if (c == this.master) return;
+			c.destroy({ children: true });
+		});
+		this.markers = [];
+	}
 	/**
 	 * Draw a rectangular background
 	 *
@@ -458,7 +468,7 @@ class SubGridSheet extends FormApplication {
 		this.object.cellHeight = formData.height;
 
 		this.object._updateFlags();
-		this.object.draw();
+		this.object.redraw();
 	}
 }
 
