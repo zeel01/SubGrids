@@ -2,6 +2,59 @@
  * Request: https://discordapp.com/channels/732325252788387980/733339683278422068/751258458501808165
  */
 
+class Translator {
+	/**
+	 * Find the coodinate of the center of a rectangle.
+	 *
+	 * @static
+	 * @param {PIXI.Rectangle} rectangle
+	 * @return {PIXI.Point} The center point of the rectangle 
+	 * @memberof Translator
+	 */
+	static cornerToCenter(rectangle) {
+		return new PIXI.Point(
+			rectangle.x + rectangle.width / 2,
+			rectangle.y + rectangle.height / 2
+		);
+	}
+	/**
+	 * Find the corner of a rectangle centered at a given point.
+	 *
+	 * @static
+	 * @param {PIXI.Point} center - The centerpoint of the rectangle
+	 * @param {PIXI.Rectangle} rectangle - The rectangle to find the corner of, likely has x: 0, y: 0
+	 * @return {PIXI.Point} A point representing the corner position of the rectangle 
+	 * @memberof Translator
+	 */
+	static centerToCorner(center, rectangle) {
+		return new PIXI.Point(
+			center.x - rectangle.width / 2,
+			center.y - rectangle.height / 2
+		);
+	}
+	/**
+	 * Converts the coordinates of a Point from one context to another
+	 *
+	 * @static
+	 * @param {PIXI.Point} point - The Point to convert
+	 * @param {PIXI.Container} context1 - The context the point is currently in
+	 * @param {PIXI.Container} context2 - The context to translate the point to
+	 * @return {*} A Point representing the coordinates in the second context
+	 * @memberof Translator
+	 */
+	static translatePoint(point, context1, context2) {
+		const pt = new PIXI.Container();
+		context1.addChild(pt);
+		pt.position.set(point.x, point.y);
+
+		const tp = context2.toLocal(new PIXI.Point(), pt);
+
+		context1.removeChild(pt);
+
+		return tp;
+	}
+}
+
 /**
  * Main class for Sub Grids
  * supports only square grids.
