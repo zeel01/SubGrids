@@ -60,6 +60,23 @@ class SubGrid extends SquareGrid {
 	draw() {
 		super.draw();
 		this._drawBackground();
+	//	this._createAreaMask();
+	}
+	drawMap(obj) {
+		const areaMask = canvas.app.renderer.extract.pixels(obj.tile)
+			.map((p, i) => (++i % 4 == 0) ? Math.ceil(p / 2) : 0)
+
+		const bffr = new PIXI.resources.BufferResource(areaMask, {
+			width: obj.tile.width,
+			height: obj.tile.height,
+		})
+		const bt = new PIXI.BaseTexture(bffr);
+		const tx = new PIXI.Texture(bt);
+		const sprite = new PIXI.Sprite(tx);
+
+		this.add(sprite);
+
+		this._areaMask = areaMask.filter((e, i) => ++i % 4 == 0);
 	}
 	redraw() {
 		this.clear();
@@ -157,9 +174,6 @@ class SubGrid extends SquareGrid {
 	}
 
 	get areaMask() {
-		//if (!this._areaMask) 
-			this._createAreaMask();
-
 		return this._areaMask;
 	}
 	_createAreaMask() {
@@ -287,6 +301,19 @@ class SubGrid extends SquareGrid {
 		this.removeChild(mark);
 		return bounds.contains(x, y);
 	}
+	inMask(object) {
+		const mark = new (this.constructor.getMarkerClass(object))(object, this, { highlight: false });
+		const cp = this.addChild(mark).getLocalPos();
+		this.removeChild(mark);
+
+		const maskValue = this.getMaskPixel(cp.x, cp.x);
+		console.debug(Math.round(cp.x), Math.round(cp.y), maskValue);
+		return maskValue > 0;
+	}
+	getMaskPixel(x, y) {
+		x = Math.round(x); y = math.round(y);
+		return this.areaMask[y * this.width + x];
+	}
 	inInnerBounds(object) {
 		const bounds = new PIXI.Rectangle(0, 0, this.width, this.height);
 		const mark = new (this.constructor.getMarkerClass(object))(object, this, { highlight: false });
@@ -296,6 +323,8 @@ class SubGrid extends SquareGrid {
 		return bounds.contains(cp.x, cp.y);
 	}
 	inBounds(object) {
+		//if (!this.inInnerBounds(object)) return false;
+		//return this.inMask(object);
 		return this.inInnerBounds(object);
 	}
 	doHighlight(x, y) {
@@ -323,6 +352,18 @@ class Marker extends PIXI.Container {
 		this.relativeAngle = this.object.data.rotation - this.grid.angle;
 
 		if (options.highlight) this._highlight();
+
+		this.object.update(
+			{ "data.flags.subgrids.grid": this.grid.name }, 
+			{ subgrid: "add" }
+		);
+	}
+
+	async remove() {
+		return await this.object.update(
+			{ "data.flags.subgrids.grid": null },
+			{ subgrid: "remove" }
+		);
 	}
 
 	get type() { return null; }
@@ -337,7 +378,7 @@ class Marker extends PIXI.Container {
 	async pull(angle) {
 		const data = this.getCanvasPos();
 		if (angle != undefined) data.rotation = this.relativeAngle + angle;
-		await this.object.update(data, { animate: false, subgrid: true });
+		await this.object.update(data, { animate: false, subgrid: "pull" });
 	}
 	_highlight() {
 		this.object._hover = true;
