@@ -8,7 +8,7 @@ class Translator {
 	 *
 	 * @static
 	 * @param {PIXI.Rectangle} rectangle
-	 * @return {PIXI.Point} The center point of the rectangle 
+	 * @return {PIXI.IPointData} The center point of the rectangle
 	 * @memberof Translator
 	 */
 	static cornerToCenter(rectangle) {
@@ -21,7 +21,7 @@ class Translator {
 	 * Find the corner of a rectangle centered at a given point.
 	 *
 	 * @static
-	 * @param {PIXI.Point} center - The centerpoint of the rectangle
+	 * @param {PIXI.IPointData} center - The centerpoint of the rectangle
 	 * @param {PIXI.Rectangle} rectangle - The rectangle to find the corner of, likely has x: 0, y: 0
 	 * @return {PIXI.Point} A point representing the corner position of the rectangle 
 	 * @memberof Translator
@@ -36,10 +36,10 @@ class Translator {
 	 * Converts the coordinates of a Point from one context to another
 	 *
 	 * @static
-	 * @param {PIXI.Point} point - The Point to convert
+	 * @param {PIXI.IPointData} point - The Point to convert
 	 * @param {PIXI.Container} context1 - The context the point is currently in
 	 * @param {PIXI.Container} context2 - The context to translate the point to
-	 * @return {*} A Point representing the coordinates in the second context
+	 * @return {PIXI.Point} A Point representing the coordinates in the second context
 	 * @memberof Translator
 	 */
 	static translatePoint(point, context1, context2) {
@@ -53,6 +53,53 @@ class Translator {
 
 		return tp;
 	}
+}
+
+/**
+ * A positional marker that can be transformed between coordinate systems.
+ * 
+ * @implements PIXI.IPointData
+ * @class Marker
+ */
+class Marker {
+	constructor(x, y, angle, context) {
+		this._x = x;
+		this._y = y;
+		this._angle = angle;
+		this.context = context;
+	}
+	get localPos() {
+		return new PIXI.Point(this._x, this._y);
+	}
+	get globalPos() {
+		return Translator.translatePoint(this.localPos, this.context, canvas.stage)
+	}
+	get globalAngle() { return this.localAngle - this.context.angle; }
+	get localAngle() { return this._angle; }
+}
+
+/**
+ * Base class adapter to interface with placeables and convert their positions.
+ *
+ * @class PlaceableAdapter
+ */
+class PlaceableAdapter {
+	constructor(object, context) {
+		this.object = object;
+		this.context = context;
+	}
+	get localPos() {
+		return Translator.translatePoint(this.globalPos, canvas.stage, this.context);
+	}
+	get localCenter() { return this.localPos; }
+	
+	get globalPos() {
+		return new PIXI.Point(this.object.x, this.object.y);
+	}
+	get globalCenter() { return this.globalPos; }
+
+	get globalAngle() { return this.object.rotation; }
+	get localAngle() { return this.object.rotation + this.context.angle; }
 }
 
 /**
