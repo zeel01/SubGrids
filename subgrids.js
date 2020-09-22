@@ -76,6 +76,11 @@ class Marker {
 	}
 	get globalAngle() { return this.localAngle - this.context.angle; }
 	get localAngle() { return this._angle; }
+
+	set localPos(point) {
+		this._x = point.x;
+		this._y = point.y;
+	}
 }
 
 /**
@@ -128,6 +133,92 @@ class TileAdapter extends BoxAdapter {
 				this.object.tile.img.width, this.object.tile.img.height
 			)
 		);
+	}
+}
+
+class Subgrid extends PIXI.Container {
+	static pxToCell(dim, size) { return Math.ceil(dim / size); }
+	static cellToPx(dim, size) { return dim * size; }
+
+	/**
+	 * Creates an instance of Subgrid.
+	 *
+	 * @param {object} options - An object containing options
+	 * @param {number} width - The width of the grid in pixels
+	 * @param {number} height - The height of the grid in pixels
+	 * @param {number} size - The "size" of a grid cell, its width in pixels
+	 * @param {number} angle - The rotational angle of the grid
+	 * @param {BaseGrid} GridType - The BaseGrid or derived type of the grid
+	 * @memberof Subgrid
+	 */
+	constructor(options={ width: 1, height: 1, size: 1, angle: 0, GridType: BaseGrid }) {
+		this.options = options;
+		this._updatePivot();
+	}
+	draw() {
+		this.grid = this.newGrid().draw();
+		this._drawBackground();
+	}
+	newGrid() {
+		return new this.GridType({
+			dimensions: {
+				size: this.size,
+				width: this.width,
+				height: this.height
+			}
+		})
+	}
+	/**
+	 * Draw a rectangular background
+	 *
+	 * @memberof Subgrid
+	 */
+	_drawBackground() {
+		const background = new PIXI.Graphics();
+		background.beginFill(0x003333, .3);
+		background.drawRect(0, 0, this.width, this.height);
+		background.endFill();
+		this.background = background;
+		this.grid.addChild(background);
+	}
+	_updatePivot() {
+		this.pivot.x = this.width / 2;
+		this.pivot.y = this.height / 2;
+	}
+	// Set width an height in grid squares, but save in pixels
+	set cellWidth(w) { this.width = parseInt(w) * this.size; }
+	set cellHeight(h) { this.height = parseInt(h) * this.size; }
+
+	// Set the width in pixels
+	set width(w) {
+		this.options.width = parseInt(w);
+		this._updatePivot();
+	}
+	set height(h) {
+		this.options.height = parseInt(h);
+		this._updatePivot();
+	}
+
+	// Get the width and height from the stored size in pixels
+	get cellWidth() { return Math.ceil(this.width / this.size); }
+	get cellHeight() { return Math.ceil(this.height / this.size); }
+
+	// Get the size
+	get size() { return this.options.size; }
+
+	// Get the width and height in pixels
+	get width() { return this.options.width; }
+	get height() { return this.options.height; }
+
+	// Return all the dimensions as an object.
+	get dimensions() {
+		return {
+			width: this.width,
+			height: this.height,
+			size: this.size,
+			cellWidth: this.cellWidth,
+			cellHeight: this.cellHeight
+		}
 	}
 }
 
