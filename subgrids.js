@@ -644,7 +644,7 @@ class SubGrid extends SquareGrid {
 	}
 }
 
-class Marker extends PIXI.Container {
+class OldMarker extends PIXI.Container {
 	constructor(object, grid, options={ master: false, mark: false, highlight: true }) {
 		super();
 
