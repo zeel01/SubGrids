@@ -101,8 +101,7 @@ class PlaceableAdapter {
 	get globalAngle() { return this.object.rotation; }
 	get localAngle() { return this.object.rotation + this.context.angle; }
 }
-
-class TokenAdapter extends PlaceableAdapter {
+class BoxAdapter extends PlaceableAdapter {
 	get localPos() { return this.localCenter; }
 	get localCenter() { 
 		return Translator.translatePoint(this.globalCenter, canvas.stage, this.context);
@@ -110,10 +109,25 @@ class TokenAdapter extends PlaceableAdapter {
 	get globalPos() {
 		return new PIXI.Point(this.object.x, this.object.y);
 	}
+}
+class TokenAdapter extends BoxAdapter {
 	get globalCenter() {
 		return Translator.cornerToCenter(
-			new PIXI.Rectangle(this.object.x, this.object.y, this.object.w, this.object.h)
-		)	
+			new PIXI.Rectangle(
+				this.object.x, this.object.y,
+				this.object.w, this.object.h
+			)
+		);
+	}
+}
+class TileAdapter extends BoxAdapter {
+	get globalCenter() {
+		return Translator.cornerToCenter(
+			new PIXI.Rectangle(
+				this.object.x, this.object.y,
+				this.object.tile.img.width, this.object.tile.img.height
+			)
+		);
 	}
 }
 
