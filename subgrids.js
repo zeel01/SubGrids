@@ -13,6 +13,24 @@ class GridMaster {
 		"SquareGrid": SquareGrid,
 		"HexagonalGrid": HexagonalGrid
 	}
+	/**
+	 * @typedef {object} Layer
+	 * @property {string} type - The type of placeable
+	 * @property {PlaceablesLayer} layer - The canvas layer being referenced
+	 * @property {PlaceableAdapter} adapter - The special adapter class needed for this type of placeable
+	 *//**
+	 * @type {Object.<string, Layer>}
+	 * @static
+	 * @memberof GridMaster
+	 */
+	static layers = {
+		/** @type Layer */
+		tokens: { type: "Token", layer: canvas.tokens, adapter: TokenAdapter },
+		/** @type Layer */
+		tiles: { type: "Tile", layer: canvas.tiles, adapter: TileAdapter },
+		/** @type Layer */
+		lights: { type: "AmbientLight", layer: canvas.lighting, adapter: PlaceableAdapter }
+	}
 	static get isGridMaster() {
 		return game.user.isGM;
 	}
@@ -38,13 +56,26 @@ class GridMaster {
 		});
 	}
 	_restorePlaceables() {
+		for (let layer of GridMaster.layers) {
+			for (let object of layer.layer.placeables) {
+				// Only restore the object if it has an associated grid
+				if (!object.getFlag("subgrids", "grid")) continue;
+
+				this._restorePlaceable(object, layer);
+			}
+		}
+	}
+	/**
+	 * Restores an a placable's subgrid state.
+	 *
+	 * @param {PlaceableObject} object - The object to restore
+	 * @param {Layer} layer - Data about the layer this object is from
+	 * @memberof GridMaster
+	 */
+	_restorePlaceable(object, layer) {
 		
 	}
 }
-
-Hooks.on("canvasReady", (canvas) => {
-	canvas.gridMaster = new GridMaster();
-});
 
 class Translator {
 	/**
@@ -888,6 +919,8 @@ class SubGridHooks {
 		});
 	}
 }
+
+Hooks.on("canvasReady", (canvas) => canvas.gridMaster = new GridMaster());
 
 Hooks.once("ready", () => SubGridHooks.readyHook());
 
