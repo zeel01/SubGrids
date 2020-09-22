@@ -73,7 +73,7 @@ class GridMaster {
 	 * @memberof GridMaster
 	 */
 	_restorePlaceable(object, layer) {
-		
+
 	}
 }
 
@@ -769,36 +769,6 @@ class Marker extends PIXI.Container {
 
 		return { x, y };
 	}
-}
-class TokenMarker extends Marker {
-	/** @override */
-	static getCenterOffsetPos(o, x, y, reverse) {
-		return reverse ? {
-			x: x - o.w / 2,
-			y: y - o.h / 2
-		} : {
-			x: x + o.w / 2,
-			y: y + o.h / 2
-		};
-	}
-	get type() { return "Token"; }
-}
-class TileMarker extends Marker {
-	/** @override */
-	static getCenterOffsetPos(o, x, y, reverse) {
-		const i = o.tile.img;
-		return reverse ? {
-			x: x - i.width  / 2,
-			y: y - i.height / 2
-		} : {
-			x: x + i.width  / 2,
-			y: y + i.height / 2
-		};
-	}
-	get type() { return "Tile"; }
-}
-class LightMarker extends Marker {
-	get type() { return "Light" };
 }
 class SubGridSheet extends FormApplication {
 	constructor(...args) {
