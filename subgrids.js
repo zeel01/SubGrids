@@ -102,6 +102,21 @@ class PlaceableAdapter {
 	get localAngle() { return this.object.rotation + this.context.angle; }
 }
 
+class TokenAdapter extends PlaceableAdapter {
+	get localPos() { return this.localCenter; }
+	get localCenter() { 
+		return Translator.translatePoint(this.globalCenter, canvas.stage, this.context);
+	}
+	get globalPos() {
+		return new PIXI.Point(this.object.x, this.object.y);
+	}
+	get globalCenter() {
+		return Translator.cornerToCenter(
+			new PIXI.Rectangle(this.object.x, this.object.y, this.object.w, this.object.h)
+		)	
+	}
+}
+
 /**
  * Main class for Sub Grids
  * supports only square grids.
