@@ -2,6 +2,50 @@
  * Request: https://discordapp.com/channels/732325252788387980/733339683278422068/751258458501808165
  */
 
+/**
+ * A class for higher-level subgrid manipulation
+ *
+ * @class GridMaster
+ */
+class GridMaster {
+	static gridTypes = {
+		"BaseGrid": BaseGrid,
+		"SquareGrid": SquareGrid,
+		"HexagonalGrid": HexagonalGrid
+	}
+	static get isGridMaster() {
+		return game.user.isGM;
+	}
+	static handleIncomingSocket({ command, options }) {
+		if (!command) return;
+
+		switch (command) {
+			case "refresh": break;
+		}
+	}
+
+	constructor() {
+		this._restoreGrids();
+		this._restorePlaceables();
+	}
+	_restoreGrids() {
+		const subData = canvas.scene.getFlag("subgrids", "grids");
+		if (!subData || typeof subData != "object") return;
+
+		this.grids = Object.values(subData).map(g => {
+			g.options.GridType = GridMaster.gridTypes[g.options.GridType];
+			return new Subgrid(g.options)
+		});
+	}
+	_restorePlaceables() {
+		
+	}
+}
+
+Hooks.on("canvasReady", (canvas) => {
+	canvas.gridMaster = new GridMaster();
+});
+
 class Translator {
 	/**
 	 * Find the coodinate of the center of a rectangle.
@@ -89,9 +133,14 @@ class Marker {
  * @class PlaceableAdapter
  */
 class PlaceableAdapter {
-	constructor(object, context) {
+	static roles = {
+		passenger: new Symbol("Passenger"),
+		driver: new Symbol("Driver")
+	}
+	constructor(object, context, options={ role: PlaceableAdapter.passenger }) {
 		this.object = object;
 		this.context = context;
+		this.options = options;
 	}
 	get localPos() {
 		return Translator.translatePoint(this.globalPos, canvas.stage, this.context);
@@ -105,6 +154,13 @@ class PlaceableAdapter {
 
 	get globalAngle() { return this.object.rotation; }
 	get localAngle() { return this.object.rotation + this.context.angle; }
+
+	get flagData() {
+		return {
+			gridId: this.context.id,
+			role: this.role
+		}
+	}
 }
 class BoxAdapter extends PlaceableAdapter {
 	get localPos() { return this.localCenter; }
@@ -782,40 +838,23 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 	html.find("div.left").append(button);
 });
 
-Hooks.on("canvasReady", (canvas) => {
-	canvas.subgrids = [];
 
-	const subData = canvas.scene.getFlag("subgrids", "grids");
-	if (!subData || typeof subData != "object") return;
-
-	canvas.subgrids = Object.values(subData).map(g => {
-		const master = canvas.tokens.placeables.find(t => t.id == g.master.id);
-		if (!master) return null;
-
-		const grid = new SubGrid(g.name, g.dimensions.cellWidth, g.dimensions.cellHeight, master, { angle: g.position.angle, skipUpdates: !SubGridManager.isGridMaster });
-		canvas.grid.addChild(grid);
-
-		grid.addList(g.markers);
-
-		return grid;
-	});
-});
 
 class SubGridHooks {
 	static readyHook() {
-		game.socket.on("module.subgrids", SubGridManager.handleIncomingSocket);
+		game.socket.on("module.subgrids", GridMaster.handleIncomingSocket);
 	}
 	static async preUpdatePlaceable(type, scene, data, update, options) {
 		if (options.subgrid) return;
 
-		if (SubGridManager.isGridMaster) this.preUpdateMasters(data, update, options);
+		if (GridMaster.isGridMaster) this.preUpdateMasters(data, update, options);
 		
 		this.preventAnimation(data, update, options);
 	}
 	static async updatePlaceable(type, scene, data, update, options) {
 		if (options.subgrid) return;
 
-		if (!SubGridManager.isGridMaster) this.preUpdateMasters(data, update, options);
+		if (!GridMaster.isGridMaster) this.preUpdateMasters(data, update, options);
 
 		for (let grid of canvas.subgrids) {
 			grid.markers.find(
@@ -836,7 +875,7 @@ class SubGridHooks {
 		}
 	}
 	static updateScene(scene, data, options) {
-		if (!options.subgrid || SubGridManager.isGridMaster) return;
+		if (!options.subgrid || GridMaster.isGridMaster) return;
 		Object.values(scene.data.flags.subgrids.grids).forEach(gd => {
 			const grid = canvas.subgrids.find(g => g.name == gd.name);
 			if (!grid) return;
@@ -847,19 +886,6 @@ class SubGridHooks {
 
 			grid.redraw();
 		});
-	}
-}
-
-class SubGridManager {
-	static handleIncomingSocket({ command, options }) {
-		if (!command) return;
-
-		switch (command) {
-			case "refresh": break;
-		}
-	}
-	static get isGridMaster() {
-		return game.user.isGM;
 	}
 }
 
