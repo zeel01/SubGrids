@@ -150,6 +150,15 @@ class Translator {
  * @class Marker
  */
 class Marker {
+	/**
+	 * Creates an instance of Marker.
+	 *
+	 * @param {number} x - X coordinate
+	 * @param {number} y - Y coordinate
+	 * @param {number} angle - Angle
+	 * @param {PIXI.Container} context - The container this marker point is relative to.
+	 * @memberof Marker
+	 */
 	constructor(x, y, angle, context) {
 		this._x = x;
 		this._y = y;
@@ -261,7 +270,7 @@ class Subgrid extends PIXI.Container {
 	 */
 	constructor(options={}) {
 		super();
-		this.options = mergeObject(options, this.constructor.defaultOptions);
+		this.options = mergeObject(this.constructor.defaultOptions, options);
 		this._updatePivot();
 		this._updatePosition();
 		this.sheet = new SubGridSheet(this);
