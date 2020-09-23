@@ -279,6 +279,7 @@ class Subgrid extends PIXI.Container {
 	 */
 	constructor(options={}) {
 		super();
+		this._id = randomID();
 		this.options = mergeObject(this.constructor.defaultOptions, options);
 		this._updatePivot();
 		this._updatePosition();
@@ -360,14 +361,22 @@ class Subgrid extends PIXI.Container {
 	get width() { return this.options.width; }
 	get height() { return this.options.height; }
 
-	// Return all the dimensions as an object.
-	get dimensions() {
+	get id() { return this._id; }
+
+	get data() {
 		return {
+			id: this.id,
+			name: this.name,
 			width: this.width,
 			height: this.height,
-			size: this.size,
+			cellHeight: this.cellHeight,
 			cellWidth: this.cellWidth,
-			cellHeight: this.cellHeight
+			options: this.options,
+			position: {
+				x: this.position.x,
+				y: this.position.y,
+				angle: this.angle
+			}
 		}
 	}
 }
