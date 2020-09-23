@@ -81,7 +81,16 @@ class GridMaster {
 	createNewSubgrid() {
 		canvas.mouseInteractionManager.target.once("mousedown", (e) => {
 			const pos = e.data.getLocalPosition(canvas.stage);
-			const grid = new Subgrid(pos);
+
+			const size = canvas.scene.data.grid;
+			const options = {
+				x: pos.x,
+				y: pos.y,
+				width: size,
+				height: size,
+				size: size
+			}
+			const grid = new Subgrid(options);
 			this.grids.push(grid);
 			grid.sheet.render(true);
 			canvas.grid.addChild(grid);
@@ -249,10 +258,10 @@ class Subgrid extends PIXI.Container {
 	static pxToCell(dim, size) { return Math.ceil(dim / size); }
 	static cellToPx(dim, size) { return dim * size; }
 	static defaultOptions = { 
-		width: 1000, 
-		height: 1000, 
+		width: 1, 
+		height: 1, 
 		x: 0, y: 0, 
-		size: 100, 
+		size: 1, 
 		angle: 0, 
 		Grid: SquareGrid 
 	}
@@ -280,6 +289,19 @@ class Subgrid extends PIXI.Container {
 		this.grid = this.newGrid().draw();
 		this.addChild(this.grid);
 		this._drawBackground();
+	}
+	redraw() {
+		this._clearDrawing();
+		this._updatePivot();
+		this._updatePosition();
+		this.draw();
+	}
+	_clearDrawing() {
+		this.removeChild(this.grid);
+		this.background.destroy();
+		this.grid.destroy();
+		this.background = null;
+		this.grid = null;
 	}
 	newGrid() {
 		return new this.options.Grid({
@@ -852,7 +874,7 @@ class SubGridSheet extends FormApplication {
 		this.object.cellHeight = formData.height;
 
 		//this.object._updateFlags();
-		//this.object.redraw();
+		this.object.redraw();
 	}
 }
 
