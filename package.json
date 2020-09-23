@@ -12,5 +12,9 @@
     "eslint": "^7.8.1",
     "gulp": "^4.0.2",
     "gulp-zip": "^5.0.2"
+  },
+  "dependencies": {
+    "babel-eslint": "^10.1.0",
+    "save-dev": "0.0.1-security"
   }
 }
