@@ -16,6 +16,7 @@ class GridMaster {
 	/**
 	 * @typedef {object} Layer
 	 * @property {string} type - The type of placeable
+	 * @property {string} name - The named of the layer, and the property on scene.data
 	 * @property {PlaceablesLayer} layer - The canvas layer being referenced
 	 * @property {PlaceableAdapter} adapter - The special adapter class needed for this type of placeable
 	 *//**
@@ -26,11 +27,11 @@ class GridMaster {
 	 */
 	layers = {
 		/** @type Layer */
-		tokens: { type: "Token", layer: canvas.tokens, adapter: TokenAdapter },
+		token: { type: "Token", name: "tokens", layer: canvas.tokens, adapter: TokenAdapter },
 		/** @type Layer */
-		tiles: { type: "Tile", layer: canvas.tiles, adapter: TileAdapter },
+		tile: { type: "Tile", name: "tiles", layer: canvas.tiles, adapter: TileAdapter },
 		/** @type Layer */
-		lights: { type: "AmbientLight", layer: canvas.lighting, adapter: PlaceableAdapter }
+		light: { type: "AmbientLight", "name": "lighting", layer: canvas.lighting, adapter: PlaceableAdapter }
 	}
 	static get isGridMaster() {
 		return game.user.isGM;
@@ -97,6 +98,10 @@ class GridMaster {
 		});
 		
 	}
+	get(id) {
+		return this.grids.find(g => g.id == id);
+	}
+	
 }
 
 class Translator {
@@ -195,11 +200,7 @@ class Marker {
  * @class PlaceableAdapter
  */
 class PlaceableAdapter {
-	static roles = {
-		passenger: Symbol("Passenger"),
-		driver: Symbol("Driver")
-	}
-	constructor(object, context, options={ role: PlaceableAdapter.passenger }) {
+	constructor(object, context, options={ role: "passenger" }) {
 		this.object = object;
 		this.context = context;
 		this.options = options;
@@ -335,6 +336,18 @@ class Subgrid extends PIXI.Container {
 	_updatePosition() {
 		this.x = this.options.x;
 		this.y = this.options.y;
+	}
+
+	inBoundingBox(point) {
+		const bounds = new PIXI.Rectangle(0, 0, this.width, this.height);
+		return bounds.contains(point.x, point.y);
+	}
+	inBounds(point) {
+		return this.inBoundingBox(point);
+	}
+
+	moveTo(point) {
+		this.position = point;
 	}
 	// Set width an height in grid squares, but save in pixels
 	set cellWidth(w) { this.width = parseInt(w) * this.size; }
@@ -919,11 +932,20 @@ class SubGridHooks {
 		game.socket.on("module.subgrids", GridMaster.handleIncomingSocket);
 	}
 	static async preUpdatePlaceable(type, scene, data, update, options) {
-		if (options.subgrid) return;
+		const gridID = data.flags?.subgrids?.grid;
+		if (!gridID) return;
+		if (data.flags?.subgrids?.role == "pilot") this.preUpdatePilot(type, gridID, data, update, options);
+
+/*		if (options.subgrid) return;
 
 		if (GridMaster.isGridMaster) this.preUpdateMasters(data, update, options);
 		
-		this.preventAnimation(data, update, options);
+		this.preventAnimation(data, update, options);*/
+	}
+	static preUpdatePilot(type, gridID, data, update, options) {
+		const grid = canvas.gridMaster.get(gridID);
+		const object = new GridMaster.layers[type].adapter(data, grid, { role: "pilot" });
+		grid.moveTo(object.globalCenter);
 	}
 	static async updatePlaceable(type, scene, data, update, options) {
 		if (options.subgrid) return;
@@ -992,11 +1014,11 @@ Hooks.on("canvasReady", (canvas) => canvas.gridMaster = new GridMaster());
 
 Hooks.once("ready", () => SubGridHooks.readyHook());
 
-Hooks.on("preUpdateToken", (...args) => SubGridHooks.preUpdatePlaceable("Token", ...args));
-Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("Tile", ...args));
-
-Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("Token", ...args));
-Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("Tile", ...args));
-Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("Light", ...args));
-
+Hooks.on("preUpdateToken", (...args) => SubGridHooks.preUpdatePlaceable("token", ...args));
+Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("tile", ...args));
+/*
+Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("token", ...args));
+Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("tile", ...args));
+Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("light", ...args));
+*/
 Hooks.on("updateScene", (...args) => SubGridHooks.updateScene(...args));
