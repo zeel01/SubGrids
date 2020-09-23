@@ -19,11 +19,12 @@ class GridMaster {
 	 * @property {PlaceablesLayer} layer - The canvas layer being referenced
 	 * @property {PlaceableAdapter} adapter - The special adapter class needed for this type of placeable
 	 *//**
-	 * @type {Object.<string, Layer>}
-	 * @static
+	 * Not static, because `canvas` won't exist until later
+	 * 
+	 * @type {Object.<string, Layer>}1
 	 * @memberof GridMaster
 	 */
-	static layers = {
+	layers = {
 		/** @type Layer */
 		tokens: { type: "Token", layer: canvas.tokens, adapter: TokenAdapter },
 		/** @type Layer */
@@ -34,7 +35,7 @@ class GridMaster {
 	static get isGridMaster() {
 		return game.user.isGM;
 	}
-	static handleIncomingSocket({ command, options }) {
+	static handleIncomingSocket({ command, options }) { // eslint-disable-line
 		if (!command) return;
 
 		switch (command) {
@@ -47,6 +48,8 @@ class GridMaster {
 		this._restorePlaceables();
 	}
 	_restoreGrids() {
+		this.grids = [];
+
 		const subData = canvas.scene.getFlag("subgrids", "grids");
 		if (!subData || typeof subData != "object") return;
 
@@ -56,7 +59,7 @@ class GridMaster {
 		});
 	}
 	_restorePlaceables() {
-		for (let layer of GridMaster.layers) {
+		for (let layer of Object.values(this.layers)) {
 			for (let object of layer.layer.placeables) {
 				// Only restore the object if it has an associated grid
 				if (!object.getFlag("subgrids", "grid")) continue;
@@ -72,8 +75,18 @@ class GridMaster {
 	 * @param {Layer} layer - Data about the layer this object is from
 	 * @memberof GridMaster
 	 */
-	_restorePlaceable(object, layer) {
-
+	_restorePlaceable(object, layer) { // eslint-disable-line
+		
+	}
+	createNewSubgrid() {
+		canvas.mouseInteractionManager.target.once("mousedown", (e) => {
+			const pos = e.data.getLocalPosition(canvas.stage);
+			const grid = new Subgrid(pos);
+			this.grids.push(grid);
+			grid.sheet.render(true);
+			canvas.grid.addChild(grid);
+		});
+		
 	}
 }
 
@@ -165,8 +178,8 @@ class Marker {
  */
 class PlaceableAdapter {
 	static roles = {
-		passenger: new Symbol("Passenger"),
-		driver: new Symbol("Driver")
+		passenger: Symbol("Passenger"),
+		driver: Symbol("Driver")
 	}
 	constructor(object, context, options={ role: PlaceableAdapter.passenger }) {
 		this.object = object;
@@ -226,33 +239,48 @@ class TileAdapter extends BoxAdapter {
 class Subgrid extends PIXI.Container {
 	static pxToCell(dim, size) { return Math.ceil(dim / size); }
 	static cellToPx(dim, size) { return dim * size; }
+	static defaultOptions = { 
+		width: 1000, 
+		height: 1000, 
+		x: 0, y: 0, 
+		size: 100, 
+		angle: 0, 
+		Grid: SquareGrid 
+	}
 
 	/**
 	 * Creates an instance of Subgrid.
 	 *
 	 * @param {object} options - An object containing options
-	 * @param {number} width - The width of the grid in pixels
-	 * @param {number} height - The height of the grid in pixels
-	 * @param {number} size - The "size" of a grid cell, its width in pixels
-	 * @param {number} angle - The rotational angle of the grid
-	 * @param {BaseGrid} GridType - The BaseGrid or derived type of the grid
+	 * @param {number} options.width - The width of the grid in pixels
+	 * @param {number} options.height - The height of the grid in pixels
+	 * @param {number} options.size - The "size" of a grid cell, its width in pixels
+	 * @param {number} options.angle - The rotational angle of the grid
+	 * @param {BaseGrid} options.Grid - The BaseGrid or derived type of the grid
 	 * @memberof Subgrid
 	 */
-	constructor(options={ width: 1, height: 1, size: 1, angle: 0, GridType: BaseGrid }) {
-		this.options = options;
+	constructor(options={}) {
+		super();
+		this.options = mergeObject(options, this.constructor.defaultOptions);
 		this._updatePivot();
+		this._updatePosition();
+		this.sheet = new SubGridSheet(this);
+		this.draw();
 	}
 	draw() {
 		this.grid = this.newGrid().draw();
+		this.addChild(this.grid);
 		this._drawBackground();
 	}
 	newGrid() {
-		return new this.GridType({
+		return new this.options.Grid({
 			dimensions: {
 				size: this.size,
 				width: this.width,
 				height: this.height
-			}
+			},
+			color: 0xFF0066, //canvas.scene.data.gridColor.replace("#", "0x"),
+			alpha: canvas.scene.data.gridAlpha
 		})
 	}
 	/**
@@ -271,6 +299,10 @@ class Subgrid extends PIXI.Container {
 	_updatePivot() {
 		this.pivot.x = this.width / 2;
 		this.pivot.y = this.height / 2;
+	}
+	_updatePosition() {
+		this.x = this.options.x;
+		this.y = this.options.y;
 	}
 	// Set width an height in grid squares, but save in pixels
 	set cellWidth(w) { this.width = parseInt(w) * this.size; }
@@ -316,7 +348,7 @@ class Subgrid extends PIXI.Container {
  * @class SubGrid
  * @extends {SquareGrid}
  */
-class SubGrid extends SquareGrid {
+class SubGrid extends SquareGrid { // eslint-disable-line
 	/**
 	 * Creates an instance of SubGrid.
 	 * @param {number} width - Width of the whole grid in pixels
@@ -502,13 +534,13 @@ class SubGrid extends SquareGrid {
 	}
 	addToken(tkn) {
 		if (tkn.id == this.master.object.id) return;
-		this.add(new TokenMarker(tkn, this));
+		this.add(new TokenMarker(tkn, this)); // eslint-disable-line
 	}
 	addTile(tile) {
-		this.add(new TileMarker(tile, this));
+		this.add(new TileMarker(tile, this)); // eslint-disable-line
 	}
 	addLight(light) {
-		this.add(new LightMarker(light, this));
+		this.add(new LightMarker(light, this)); // eslint-disable-line
 	}
 	canAdd(obj) {
 		return this.inBounds(obj) && !this.alreadyHas(obj);
@@ -545,7 +577,7 @@ class SubGrid extends SquareGrid {
 		return this.markers.some(m => m.object.id == obj.id);
 	}
 	setMaster(object) {
-		this.master = new TokenMarker(object, this, { master: true });
+		this.master = new TokenMarker(object, this, { master: true }); // eslint-disable-line
 		this.addChild(this.master);
 
 		this._updateFlags();
@@ -593,9 +625,9 @@ class SubGrid extends SquareGrid {
 		return new PIXI.Rectangle(nx, ny, w, h);
 	}
 	static getMarkerClass(object) {
-		if (object instanceof Token) return TokenMarker;
-		if (object instanceof Tile) return TileMarker;
-		if (object instanceof AmbientLight) return LightMarker;
+		if (object instanceof Token) return TokenMarker; // eslint-disable-line
+		if (object instanceof Tile) return TileMarker; // eslint-disable-line
+		if (object instanceof AmbientLight) return LightMarker; // eslint-disable-line
 		
 		return Marker;
 	}
@@ -604,7 +636,7 @@ class SubGrid extends SquareGrid {
 		const mark = new (this.constructor.getMarkerClass(object))(object, this, { highlight: false });
 		const cp = this.addChild(mark).getCanvasPos();
 		const { x, y } = mark._getCenterOffsetPos(cp.x, cp.y);
-		 
+
 		this.removeChild(mark);
 		return bounds.contains(x, y);
 	}
@@ -639,12 +671,12 @@ class SubGrid extends SquareGrid {
 
 		this.highlightGridPosition(this.highlightLayer, { x, y, color: 0xFF0000, border: 0x0000FF })
 	}
-	refresh(data) {
+	refresh(data) { // eslint-disable-line
 		//
 	}
 }
 
-class OldMarker extends PIXI.Container {
+class OldMarker extends PIXI.Container { // eslint-disable-line
 	constructor(object, grid, options={ master: false, mark: false, highlight: true }) {
 		super();
 
@@ -673,7 +705,7 @@ class OldMarker extends PIXI.Container {
 		);
 	}
 
-	get type() { return null; }
+	get type() { return null; } // eslint-disable-line class-methods-use-this
 	get data() {
 		return {
 			id: this.object.id,
@@ -749,7 +781,7 @@ class OldMarker extends PIXI.Container {
 	 * @return {number[]} {x, y} - The calculated coordinates.
 	 * @memberof Marker
 	 */
-	static getCenterOffsetPos(o, x, y, reverse) {
+	static getCenterOffsetPos(o, x, y, reverse) { // eslint-disable-line
 		return { x, y };
 	}
 	getLocalPos() {
@@ -776,17 +808,17 @@ class SubGridSheet extends FormApplication {
 	}
 	static get defaultOptions() {
 		return mergeObject(super.defaultOptions, {
-			classes: ['subgrids'],
+			classes: ["subgrids"],
 			width: 600,
 			height: 400,
-			title: 'Edit Grid',
+			title: "Edit Grid",
 			editable: true,
 			submitOnChange: true,
 			closeOnSubmit: false,
 			submitOnClose: true
 		});
 	}
-	get template() {
+	get template() { // eslint-disable-line class-methods-use-this
 		return `modules/subgrids/grid-sheet.html`;
 	}
 
@@ -810,11 +842,12 @@ class SubGridSheet extends FormApplication {
 		this.object.cellWidth = formData.width;
 		this.object.cellHeight = formData.height;
 
-		this.object._updateFlags();
-		this.object.redraw();
+		//this.object._updateFlags();
+		//this.object.redraw();
 	}
 }
 
+/*
 Hooks.on("renderTokenHUD", (hud, html) => {
 	let button = document.createElement("div");
 
@@ -838,7 +871,7 @@ Hooks.on("renderTokenHUD", (hud, html) => {
 
 	html.find("div.left").append(button);
 });
-
+*/
 
 
 class SubGridHooks {
@@ -869,7 +902,7 @@ class SubGridHooks {
 				grid => grid.markers.some(m => m.object.id == data._id)
 		)) options.animate = false;
 	}
-	static async preUpdateMasters(data, update, options) {
+	static async preUpdateMasters(data, update, options) { // eslint-disable-line no-unused-vars
 		for (let grid of canvas.subgrids) {
 			if (data._id != grid.master.object.id) continue;
 			await grid.preUpdateMaster(...arguments);
@@ -889,6 +922,31 @@ class SubGridHooks {
 		});
 	}
 }
+
+Hooks.on("getSceneControlButtons", (layers)=> {
+	layers.find(l => l.name = "token").tools.push({
+		icon: "fas fa-th",
+		name: "subgrid",
+		title: "subgrids.editTooltip",
+		onClick: () => canvas.gridMaster.createNewSubgrid()
+	})
+	/*
+		layers.push({
+		activeTool: "subgrid",
+		icon: "fas fa-th",
+		name: "subgrids",
+		layer: "TokenLayer",
+		title: "subgrids.title",
+		onClick: () => console.log("GRIDS!!!"),
+		tools: [{
+			icon: "fas fa-th",
+			name: "subgrid",
+			title: "subgrids.editTooltip",
+			onClick: ()=> console.log("GRIDS!!!")
+		}]
+	});
+	*/
+})
 
 Hooks.on("canvasReady", (canvas) => canvas.gridMaster = new GridMaster());
 
