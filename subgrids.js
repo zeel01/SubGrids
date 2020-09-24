@@ -8,6 +8,7 @@
  * @class GridMaster
  */
 class GridMaster {
+	/** @type {Object.<string, BaseGrid>} */
 	static gridTypes = {
 		"BaseGrid": BaseGrid,
 		"SquareGrid": SquareGrid,
@@ -401,6 +402,7 @@ class Subgrid extends PIXI.Container {
 
 	get id() { return this._id; }
 
+	/** @type Subgrid.defaultOptions */
 	get data() {
 		const opts = duplicate(this.options);
 		opts.id = this.id;
