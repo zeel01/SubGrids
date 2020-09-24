@@ -54,9 +54,13 @@ class GridMaster {
 		const subData = canvas.scene.getFlag("subgrids", "grids");
 		if (!subData || typeof subData != "object") return;
 
-		this.grids = Object.values(subData).map(g => {
-			g.options.GridType = GridMaster.gridTypes[g.options.GridType];
-			return new Subgrid(g.options)
+		this.grids = subData.map(g => {
+			g.options.Grid = GridMaster.gridTypes[g.Grid];
+			g.options.id = g.id;
+
+			const grid = new Subgrid(this, g.options);
+			canvas.grid.addChild(grid);
+			return grid;
 		});
 	}
 	_restorePlaceables() {
@@ -91,7 +95,7 @@ class GridMaster {
 				height: size,
 				size: size
 			}
-			const grid = new Subgrid(options);
+			const grid = new Subgrid(this, options);
 			this.grids.push(grid);
 			grid.sheet.render(true);
 			canvas.grid.addChild(grid);
@@ -100,6 +104,15 @@ class GridMaster {
 	}
 	get(id) {
 		return this.grids.find(g => g.id == id);
+	}
+	updateFlags() {
+		//if (this.skipUpdates) return;
+
+		canvas.scene.update({
+			"flags.subgrids.grids": this.grids.map(g => duplicate(g.data))
+		}, {
+			subgrid: true
+		});
 	}
 	
 }
@@ -235,11 +248,14 @@ class BoxAdapter extends PlaceableAdapter {
 	}
 }
 class TokenAdapter extends BoxAdapter {
+	get w() { return this.object.width * canvas.grid.w; }
+	get h() { return this.object.height * canvas.grid.h; }
+
 	get globalCenter() {
 		return Translator.cornerToCenter(
 			new PIXI.Rectangle(
 				this.object.x, this.object.y,
-				this.object.w, this.object.h
+				this.w, this.h
 			)
 		);
 	}
@@ -249,7 +265,7 @@ class TileAdapter extends BoxAdapter {
 		return Translator.cornerToCenter(
 			new PIXI.Rectangle(
 				this.object.x, this.object.y,
-				this.object.tile.img.width, this.object.tile.img.height
+				this.object.data.width, this.object.data.height
 			)
 		);
 	}
@@ -264,28 +280,34 @@ class Subgrid extends PIXI.Container {
 		x: 0, y: 0, 
 		size: 1, 
 		angle: 0, 
-		Grid: SquareGrid 
+		Grid: SquareGrid,
+		id: null
 	}
 
 	/**
 	 * Creates an instance of Subgrid.
 	 *
+	 * @param {GridMaster} gridmaster - A reference to the GridMaster singleton
 	 * @param {object} options - An object containing options
 	 * @param {number} options.width - The width of the grid in pixels
 	 * @param {number} options.height - The height of the grid in pixels
 	 * @param {number} options.size - The "size" of a grid cell, its width in pixels
 	 * @param {number} options.angle - The rotational angle of the grid
 	 * @param {BaseGrid} options.Grid - The BaseGrid or derived type of the grid
+	 * @param {string} options.id - A (hopefully) unique ID for this grid
 	 * @memberof Subgrid
 	 */
-	constructor(options={}) {
+	constructor(gridmaster, options={}) {
 		super();
-		this._id = randomID();
+		this._id = options.id || randomID();
+		this.gridmaster = gridmaster;
 		this.options = mergeObject(this.constructor.defaultOptions, options);
 		this._updatePivot();
 		this._updatePosition();
 		this.sheet = new SubGridSheet(this);
 		this.draw();
+
+		if (!options.id) this.gridmaster.updateFlags();
 	}
 	draw() {
 		this.grid = this.newGrid().draw();
@@ -348,6 +370,7 @@ class Subgrid extends PIXI.Container {
 
 	moveTo(point) {
 		this.position = point;
+		this.gridmaster.updateFlags();
 	}
 	// Set width an height in grid squares, but save in pixels
 	set cellWidth(w) { this.width = parseInt(w) * this.size; }
@@ -389,7 +412,8 @@ class Subgrid extends PIXI.Container {
 				x: this.position.x,
 				y: this.position.y,
 				angle: this.angle
-			}
+			},
+			Grid: this.grid.constructor.name
 		}
 	}
 }
@@ -932,23 +956,23 @@ class SubGridHooks {
 		game.socket.on("module.subgrids", GridMaster.handleIncomingSocket);
 	}
 	static async preUpdatePlaceable(type, scene, data, update, options) {
-		const gridID = data.flags?.subgrids?.grid;
-		if (!gridID) return;
-		if (data.flags?.subgrids?.role == "pilot") this.preUpdatePilot(type, gridID, data, update, options);
+		if (options.subgrid) return;
 
-/*		if (options.subgrid) return;
-
-		if (GridMaster.isGridMaster) this.preUpdateMasters(data, update, options);
+		//if (GridMaster.isGridMaster) this.preUpdateMasters(data, update, options);
 		
-		this.preventAnimation(data, update, options);*/
+		this.preventAnimation(data, update, options);
 	}
-	static preUpdatePilot(type, gridID, data, update, options) {
+	static updatePilot(type, gridID, data, update, options) {
 		const grid = canvas.gridMaster.get(gridID);
-		const object = new GridMaster.layers[type].adapter(data, grid, { role: "pilot" });
+		const object = new canvas.gridMaster.layers[type].adapter(data, grid, { role: "pilot" });
 		grid.moveTo(object.globalCenter);
 	}
 	static async updatePlaceable(type, scene, data, update, options) {
-		if (options.subgrid) return;
+		const gridID = data.flags?.subgrids?.grid;
+		if (!gridID) return;
+		if (data.flags?.subgrids?.role == "pilot") this.updatePilot(type, gridID, data, update, options);
+		
+		/*if (options.subgrid) return;
 
 		if (!GridMaster.isGridMaster) this.preUpdateMasters(data, update, options);
 
@@ -956,13 +980,11 @@ class SubGridHooks {
 			grid.markers.find(
 				m => m.object.id == data._id
 			)?.updateObject(update);
-		}
+		}*/
 	}
 	static preventAnimation(data, update, options) {
 		if (!(update.x || update.y)) return;
-		if (canvas.subgrids.some(
-				grid => grid.markers.some(m => m.object.id == data._id)
-		)) options.animate = false;
+		if (data.flags?.subgrids?.grid) options.animate = false;
 	}
 	static async preUpdateMasters(data, update, options) { // eslint-disable-line no-unused-vars
 		for (let grid of canvas.subgrids) {
@@ -1016,9 +1038,9 @@ Hooks.once("ready", () => SubGridHooks.readyHook());
 
 Hooks.on("preUpdateToken", (...args) => SubGridHooks.preUpdatePlaceable("token", ...args));
 Hooks.on("preUpdateTile", (...args) => SubGridHooks.preUpdatePlaceable("tile", ...args));
-/*
+
 Hooks.on("updateToken", (...args) => SubGridHooks.updatePlaceable("token", ...args));
 Hooks.on("updateTile", (...args) => SubGridHooks.updatePlaceable("tile", ...args));
-Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("light", ...args));
-*/
+//Hooks.on("updateAmbientLight", (...args) => SubGridHooks.updatePlaceable("light", ...args));
+
 Hooks.on("updateScene", (...args) => SubGridHooks.updateScene(...args));
