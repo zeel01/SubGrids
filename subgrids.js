@@ -55,10 +55,9 @@ class GridMaster {
 		if (!subData || typeof subData != "object") return;
 
 		this.grids = subData.map(g => {
-			g.options.Grid = GridMaster.gridTypes[g.Grid];
-			g.options.id = g.id;
+			g.Grid = GridMaster.gridTypes[g.Grid];
 
-			const grid = new Subgrid(this, g.options);
+			const grid = new Subgrid(this, g);
 			canvas.grid.addChild(grid);
 			return grid;
 		});
@@ -109,7 +108,7 @@ class GridMaster {
 		//if (this.skipUpdates) return;
 
 		canvas.scene.update({
-			"flags.subgrids.grids": this.grids.map(g => duplicate(g.data))
+			"flags.subgrids.grids": this.grids.map(g => g.data)
 		}, {
 			subgrid: true
 		});
@@ -370,6 +369,9 @@ class Subgrid extends PIXI.Container {
 
 	moveTo(point) {
 		this.position = point;
+		this.options.x = point.x;
+		this.options.y = point.y;
+
 		this.gridmaster.updateFlags();
 	}
 	// Set width an height in grid squares, but save in pixels
@@ -400,21 +402,13 @@ class Subgrid extends PIXI.Container {
 	get id() { return this._id; }
 
 	get data() {
-		return {
-			id: this.id,
-			name: this.name,
-			width: this.width,
-			height: this.height,
-			cellHeight: this.cellHeight,
-			cellWidth: this.cellWidth,
-			options: this.options,
-			position: {
-				x: this.position.x,
-				y: this.position.y,
-				angle: this.angle
-			},
-			Grid: this.grid.constructor.name
-		}
+		const opts = duplicate(this.options);
+		opts.id = this.id;
+		opts.Grid = this.grid.constructor.name;
+		opts.cellHeight = this.cellHeight;
+		opts.cellWidth = this.cellWidth;
+
+		return duplicate(opts);
 	}
 }
 
@@ -921,6 +915,7 @@ class SubGridSheet extends FormApplication {
 
 		//this.object._updateFlags();
 		this.object.redraw();
+		this.object.gridmaster.updateFlags();
 	}
 }
 
