@@ -156,6 +156,10 @@ class Translator {
 	 * @param {PIXI.Container} context2 - The context to translate the point to
 	 * @return {PIXI.Point} A Point representing the coordinates in the second context
 	 * @memberof Translator
+	 *
+	 * @example
+	 * //This will translate a point at 256, 256 in myContainer, to its locations on the main stage. 
+	 * translatePoint(new Point(256, 256), myContainer, canvas.stage)
 	 */
 	static translatePoint(point, context1, context2) {
 		const pt = new PIXI.Container();
