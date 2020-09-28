@@ -17,7 +17,7 @@ class GridMaster {
 	/**
 	 * @typedef {object} Layer
 	 * @property {string} type - The type of placeable
-	 * @property {string} name - The named of the layer, and the property on scene.data
+	 * @property {string} name - The name of the layer, and the property on scene.data
 	 * @property {PlaceablesLayer} layer - The canvas layer being referenced
 	 * @property {PlaceableAdapter} adapter - The special adapter class needed for this type of placeable
 	 *//**
@@ -32,7 +32,7 @@ class GridMaster {
 		/** @type Layer */
 		tile: { type: "Tile", name: "tiles", layer: canvas.tiles, adapter: TileAdapter },
 		/** @type Layer */
-		light: { type: "AmbientLight", "name": "lighting", layer: canvas.lighting, adapter: PlaceableAdapter }
+		light: { type: "AmbientLight", name: "lighting", layer: canvas.lighting, adapter: PlaceableAdapter }
 	}
 	static get isGridMaster() {
 		return game.user.isGM;
@@ -59,7 +59,6 @@ class GridMaster {
 			g.Grid = GridMaster.gridTypes[g.Grid];
 
 			const grid = new Subgrid(this, g);
-			canvas.grid.addChild(grid);
 			return grid;
 		});
 	}
@@ -98,7 +97,6 @@ class GridMaster {
 			const grid = new Subgrid(this, options);
 			this.grids.push(grid);
 			grid.sheet.render(true);
-			canvas.grid.addChild(grid);
 		});
 		
 	}
@@ -117,6 +115,27 @@ class GridMaster {
 	
 }
 
+class SubGridLayer extends PlaceablesLayer {
+	/**
+	 * 
+	 * @override
+	 * @readonly
+	 * @static
+	 * @memberof SubGridLayer
+	 */
+	static get layerOptions() {
+		return {
+			canDragCreate: game.user.isGM,
+			canDelete: game.user.isGM,
+			controllableObjects: true,
+			rotatableObjects: true,
+			snapToGrid: true,
+			gridPrecision: 2,
+			objectClass: Subgrid,
+			sheetClass: SubGridSheet
+		}
+	}
+}
 class Translator {
 	/**
 	 * Find the coodinate of the center of a rectangle.
@@ -312,6 +331,9 @@ class Subgrid extends PIXI.Container {
 		this._updatePosition();
 		this.sheet = new SubGridSheet(this);
 		this.draw();
+		this.interactive = true;
+
+		canvas.grid.addChild(this);
 
 		if (!options.id) this.gridmaster.updateFlags();
 	}
