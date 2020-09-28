@@ -278,14 +278,16 @@ class TileAdapter extends BoxAdapter {
 class Subgrid extends PIXI.Container {
 	static pxToCell(dim, size) { return Math.ceil(dim / size); }
 	static cellToPx(dim, size) { return dim * size; }
-	static defaultOptions = { 
-		width: 1, 
-		height: 1, 
-		x: 0, y: 0, 
-		size: 1, 
-		angle: 0, 
-		Grid: SquareGrid,
-		id: null
+	static get defaultOptions() {
+		return { 
+			width: 1, 
+			height: 1, 
+			x: 0, y: 0, 
+			size: 1, 
+			angle: 0, 
+			Grid: SquareGrid,
+			id: null
+		}
 	}
 
 	/**
@@ -965,6 +967,7 @@ class SubGridHooks {
 	}
 	static updatePilot(type, gridID, data, update, options) {
 		const grid = canvas.gridMaster.get(gridID);
+		if (!grid) return;
 		const object = new canvas.gridMaster.layers[type].adapter(data, grid, { role: "pilot" });
 		grid.moveTo(object.globalCenter);
 	}
